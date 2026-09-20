@@ -127,3 +127,128 @@ Do not claim tests passed unless executed. Do not report profits or improved cas
 - Do not use "players who actually scored 20+" as evidence of systematic mean underprojection; selecting on the outcome creates bias.
 
 **Definition of done:** A reviewer can reproduce the candidate cash build, trace each selected pitcher's workload to pregame evidence, verify all delivery gates, and inspect the changes without relying on an agent's narrative. This does not require or establish a profitable strategy.
+
+
+---
+
+## Task 001 — ChatGPT review R1 (2026-09-20)
+
+**Review recommendation: CHANGES REQUIRED. Keep PR #1 draft; do not activate.**
+**Reviewed PR head:** `dd7dfcaa51870c74568ac10bce51724785b0fc37`
+**Human acceptance:** not granted; only Ulysses marks accepted.
+**Scope:** independent code inspection plus local execution of the pinned PR's cash package and tests. No production inputs, live entries, or historical snapshots were available. No performance claims.
+
+The outbox's older implementation SHA is not the reviewed head. The original Task 001 brief above remains unchanged. Address the findings below on the existing implementation branch and append a new response to GrokOutgoingMessages.md.
+
+### Verification performed
+
+- Executed `python3 -m unittest tests.test_task001 -v`: all 17 submitted tests pass.
+- Also ran independent synthetic probes described below using the submitted `_tiny_slate` / `_write_inputs` fixtures and real CLI.
+- PR changed-file listing confirms the root GPP Python builders and `lab/slate_gates.py` are unchanged. This verifies file-level isolation, not live deployment.
+- Passing 17 tests does not cover all 14 requested acceptance requirements: wrong-slate/game, future evidence, compatible contest exports, actual CLI lock handling, and independent GPP regression coverage are not established by the submitted suite.
+
+### R1-01 — P1: Workload cancels out of fallback projections
+
+**Location:** `cash/builder.py:load_players`, fallback skill calculation.
+
+When per_inning_skill is absent, the implementation computes `skill = raw / new_expected_ip`, then `proj = skill * new_expected_ip`. The new innings estimate cancels. Original salary/opener-capped means survive unchanged, so the central modeling repair does not affect selection in the fallback path.
+
+**Reproduction:** remove per_inning_skill from the p1 fixture (raw_proj=15). Give it three comparable starts of 3.0 innings, then three of 6.0. Expected innings changes 3 → 6, but projection remains 15 → 15; inferred skill changes 5 → 2.5.
+
+**Required:** use independently evidenced rates or an explicit, frozen original rate/workload decomposition; never infer rates from the same new innings estimate they will multiply. If a trustworthy conversion is unavailable, label/block the unresolved candidate rather than advertise repaired projections. Regression must show workload changes affect projection while the same skill input remains fixed, including the normal fallback/input-adapter route.
+
+### R1-02 — P1: Identity, slate, and source validation do not enforce the contract
+
+**Locations:** `cash/evidence.py:load_pitcher_evidence/index_evidence`, `cash/builder.py:load_players`, `cash/cli.py`, `cash/validate.py`.
+
+Schema errors are collected but ignored. DK ID lookup can select evidence with unrelated MLB/game/slate IDs. CLI passes args.slate_id as both actual and expected slate; game validation compares the lineup's copied game ID with the same Player object. These checks cannot establish independent identity. Projection and pool metadata are not checked against the requested slate.
+
+**Reproductions:** each independently returned exit 0, ready_for_upload, errors=[]:
+- Set p1 evidence slate_date=1999-01-01, slate_id=wrong, game_id=other-game, mlb_id=wrong; leave dk_id=p1.
+- Remove p1 evidence mlb_id entirely.
+
+**Required:** validate composite identity against authoritative slate-specific mappings and independent input metadata; enforce schema errors, uniqueness, nonempty IDs and valid DK roster eligibility. Do not fall back to matchup text as a unique game ID for doubleheaders. Add CLI-level negative tests, not just helper tests.
+
+### R1-03 — P1: Freshness and pregame evidence checks are incomplete
+
+Only the JSON envelope timestamp is checked. Individual evidence timestamps and appearance dates are ignored; hitter confirmation and projection/pool provenance have no enforced freshness checks. A newly dated envelope can bless stale or future contents.
+
+**Reproductions:** exit 0 / ready / no errors for:
+- Change all recent appearance dates to 2030-01-01 while decision_time remains 2026-09-18.
+- Set every pitcher's information_as_of and retrieved_at to 2020 while keeping the envelope current.
+
+**Required:** enforce pre-decision availability and per-source/per-player critical freshness, including hitter lineup/scratch checks. Validate retrieval vs as-of semantics and reject malformed decision times. Do not use target-game/postgame observations in historical features. Keep stale unrelated candidates excluded without necessarily blocking a valid alternative lineup.
+
+### R1-04 — P1: Missing evidence becomes a verified starter; restrictions are mishandled
+
+**Location:** `cash/workload.py:resolve_workload`.
+
+A record containing only role=unknown and announced_starter=True returns cash_eligible=True, reason=verified_starter, expected_ip=5.6667 from a prior. A probable starter is not evidence of a full workload. Role=starter can also remain eligible with availability_status=unknown. There is no required source-backed role/workload resolution.
+
+Restriction handling is starter-only and caps every truthy starter restriction to the same three innings without interpreting its meaning. Bulk restrictions are ignored in the estimate.
+
+**Reproductions:**
+- `resolve_workload({"role":"unknown","announced_starter":True})` produces the verified 5.6667-IP starter described above.
+- A bulk record with three 5.0-IP appearances and pitch_limit="15 pitches" remains eligible at 5.0 innings.
+- Bulk prior 4.1 is used as decimal innings although README describes baseball notation; standardize units.
+
+**Required:** require meaningful role/workload evidence; classify insufficient evidence as unavailable. Priors may support documented estimates, not silently establish eligibility. Use structured restriction types/values, apply to every relevant role, distinguish absence of a restriction from an actual cap, and document how rest/recent workload affect estimates.
+
+### R1-05 — P1: Scratch and roster legality gaps allow invalid ready outputs
+
+**Locations:** `cash/builder.py:load_players/_legal`, `cash/validate.py`.
+
+Scratched pitchers are not excluded or checked at delivery. _legal verifies nonempty game IDs but not the required game diversity. The final delivery layer does not independently revalidate all roster constraints.
+
+**Reproductions:** exit 0 / ready / no errors for:
+- Set pool p1 scratched=true.
+- Put all ten players in game g1 with five hitters on AAA and three on BBB.
+
+**Required:** enforce scratches/status for pitchers and hitters, current eligibility, all Classic slot/unique/salary/team/game constraints, finite values, and valid input ranges. Revalidate the exact final exported roster. Add game-start/lock awareness rather than relying on a generic six-hour envelope age.
+
+### R1-06 — P1: Upload Entries can overwrite incompatible and locked entries
+
+**Locations:** `cash/entries.py`, `cash/cli.py`.
+
+CLI never supplies locked_fields or verifies entry contest/slate compatibility. Parser uses DictReader despite repeated P/OF headers; writer substitutes P.1/OF.1 headers and drops contest metadata. locked_fields helper only checks membership anywhere in the lineup, then overwrites slots without revalidating, which can create duplicates.
+
+**Reproduction:** pass this file to the normal CLI:
+```csv
+Entry ID,Contest ID,Slate ID,P,P,C,1B,2B,3B,SS,OF,OF,OF
+111,foreign-contest,other-slate,oldA (LOCKED),oldB (LOCKED),c,b1,b2,b3,ss,o1,o2,o3
+```
+Actual result: exit 0 / ready; row rewritten to p1,p2,...; Contest ID and Slate ID discarded; locked players replaced.
+
+**Required:** preserve the real export's ordered/repeated headers and required metadata, independently resolve compatible contest/slate, and handle locks per entry and exact slot. Refuse post-lock updates if lock state cannot be established. Test representative authentic-format fixtures with anonymized identifiers as well as malformed rows and mixed slates.
+
+### R1-07 — P1: Publication is not transactional and stale ready files stay active
+
+**Location:** `cash/cli.py`.
+
+ready.json is written before parsing/writing entries. An entry-export error can therefore leave a new ready file with no completed matching export/manifest. Entries are written non-atomically; there is no writer lock; shared .tmp names race. Failed rebuilds preserve the old ready filename and upload CSV at active locations. The existing test explicitly checks preservation but not invalidation of the active deliverable.
+
+**Required:** immutable per-run artifacts, complete validation before publication, a writer lock, and one atomic active-run/status pointer. Preserve prior history without presenting it as the current ready output. Failures must invalidate current delivery status unambiguously. Test export failure, interrupted publication, concurrent writers, and success-followed-by-failure.
+
+### R1-08 — P2: The claimed maximum-mean objective is not implemented
+
+**Location:** `cash/builder.py:build_one_lineup/_greedy_lineup`.
+
+For >16 hitters the builder accepts the first feasible greedy lineup and checks no alternatives. Smaller enumeration is also truncated to top-12 pitchers/top-8 slot candidates, so it is not generally exact.
+
+**Independent synthetic reproduction:** two pitchers total salary 20000 / projection 39; four infield slots each 2000 / 10; catchers expensive=6000 / 11 and value=2000 / 10; three OF at 6000 / 15 and three at 2000 / 1; add six unused low-projection catchers to exceed 16 hitters. Split catcher/OF and other infielders across two teams/games.
+- Actual greedy output: 121 projected points, salary 48000, n_checked=1.
+- Legal alternative: value catcher plus all three premium OF, same pitchers/infielders: 134 points, salary 48000.
+
+**Required:** implement deterministic constrained optimization with a declared solution status and appropriate benchmark checks, or explicitly surface a bounded/heuristic result and its limitations. For this task, a demonstrated optimizer is preferred because greedy decisions can materially harm the intended lineup selection. Do not label first-feasible output max_provisional_mean without qualification.
+
+### R1-09 — P2: Provenance and usable delivery are incomplete
+
+CLI sets gate_hash to the freshly calculated projection hash; there is no independent gate artifact binding. If gates are generated entirely in-process, record this honestly and bind the gate configuration/code/evidence to that run rather than passing a self-comparison.
+
+Manifest omits entries/contest input hashes and meaningful config details, and code_version defaults to a user-supplied generic string. Workload output omits sufficient source identity to trace the selected estimate without locating the original input manually. No committed full end-to-end sample includes pool, projections, evidence, manifest, and ready/draft outputs. Existing projection source=posted format also needs an explicit adapter to the new posted fields; do not assume the absent live cash builder supplies it.
+
+**Required:** content-based code/config provenance, every consumed input hash, exact source/decision timestamps, game mappings, and a reproducible offline example. Update the old runbook/commands so the legacy salary-based cash path cannot be mistaken for the repaired route; preserve historical sections as history.
+
+### Next response expected
+
+Address R1-01 through R1-09 on PR #1. Add regression coverage for these observed failures. Append an R1 response in the outbox mapping each finding to changes, exact test command/results, and remaining limitations. Include a self-contained synthetic end-to-end example plus any authentic pre-lock replay only if those inputs truly exist. Do not merge, activate live, or claim improved cash results from these software tests.
