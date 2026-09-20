@@ -1,0 +1,14 @@
+POSTED-BATS DRAFT — MLB live feed battingOrder present on all 10 slate games (Pre-Game).
+Still not a lock file. Recheck scratches before upload.
+Model: own-model means + StatsAPI announced SPs + StatsAPI posted nines.
+salary=50000 unused=0 proj_sum=97.0
+P   Gavin Williams         SP       CLE $10400 20.4 44213406
+P   Spencer Miles          RP       TOR $5700  8.4 44214125
+C   Yainer Diaz            C        HOU $3200  4.5 44213583
+1B  Nathaniel Lowe         1B       CLE $3200  4.6 44213590
+2B  Bryan Torres           2B/OF    STL $3100  4.3 44213604
+3B  Hao-Yu Lee             2B/3B    DET $3200  4.5 44213585
+SS  Taylor Walls           SS       TB  $3300  4.8 44213568
+OF  Randy Arozarena        OF       SEA $6200  16.5 44213429
+OF  Pete Crow-Armstrong    OF       CHC $6700  16.3 44213425
+OF  Julio Rodriguez        OF       SEA $5000  12.7 44213457
