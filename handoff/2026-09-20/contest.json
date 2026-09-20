@@ -1,0 +1,9 @@
+{
+  "contest_type": "multiplier_cash",
+  "entrants": 31,
+  "paid_places": 9,
+  "slate_date": "2026-09-20",
+  "slate_id": "dk-classic-2026-09-20",
+  "other_settings": "unknown",
+  "objective_note": "cash.cli maximizes provisional mean; it does not model top-9-of-31 probability"
+}
