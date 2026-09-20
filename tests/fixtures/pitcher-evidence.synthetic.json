@@ -1,0 +1,45 @@
+{
+  "information_as_of": "2026-09-18T16:00:00+00:00",
+  "retrieved_at": "2026-09-18T16:00:00+00:00",
+  "note": "SYNTHETIC — software fixture only, not a pre-lock snapshot",
+  "pitchers": [
+    {
+      "slate_date": "2026-09-18",
+      "slate_id": "syn-1",
+      "game_id": "g1",
+      "mlb_id": "1",
+      "dk_id": "p1",
+      "dk_eligibility": "RP",
+      "announced_starter": true,
+      "role": "starter",
+      "recent_appearances": [
+        {"date": "2026-09-12", "role": "starter", "innings": "6.0", "outs": 18},
+        {"date": "2026-09-07", "role": "starter", "innings": "5.2", "outs": 17},
+        {"date": "2026-09-02", "role": "starter", "innings": "6.1", "outs": 19}
+      ],
+      "availability_status": "ok",
+      "conflicts": [],
+      "per_inning_skill": 3.0,
+      "source": "synthetic"
+    },
+    {
+      "slate_date": "2026-09-18",
+      "slate_id": "syn-1",
+      "game_id": "g1",
+      "mlb_id": "2",
+      "dk_id": "p2",
+      "dk_eligibility": "SP",
+      "announced_starter": true,
+      "role": "starter",
+      "recent_appearances": [
+        {"date": "2026-09-13", "role": "starter", "innings": "5.1", "outs": 16},
+        {"date": "2026-09-08", "role": "starter", "innings": "6.0", "outs": 18},
+        {"date": "2026-09-03", "role": "starter", "innings": "5.2", "outs": 17}
+      ],
+      "availability_status": "ok",
+      "conflicts": [],
+      "per_inning_skill": 3.0,
+      "source": "synthetic"
+    }
+  ]
+}
