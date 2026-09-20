@@ -18,6 +18,7 @@ REQUIRED = (
     "role",
     "announced_starter",
 )
+VALID_ELIG = {"SP", "RP", "P"}
 
 
 def file_sha256(path: Path) -> str:
@@ -51,6 +52,9 @@ def validate_pitcher_record(rec: dict) -> list[str]:
     role = str(rec.get("role") or "").lower()
     if role and role not in ("starter", "opener", "bulk", "relief", "unknown"):
         errs.append(f"bad_role:{role}")
+    elig = str(rec.get("dk_eligibility") or "").upper()
+    if elig and not any(tok in VALID_ELIG for tok in elig.replace("/", " ").split()):
+        errs.append(f"bad_dk_eligibility:{elig}")
     return errs
 
 
@@ -65,18 +69,63 @@ def load_pitcher_evidence(path: Path) -> list[dict]:
     else:
         raise ValueError("pitcher evidence must be a list or {pitchers: []}")
     out = []
+    seen = set()
     for r in rows:
         rec = dict(r)
         rec["_meta"] = meta
         errs = validate_pitcher_record(rec)
+        key = (
+            str(rec.get("slate_date")),
+            str(rec.get("slate_id")),
+            str(rec.get("game_id")),
+            str(rec.get("mlb_id")),
+            str(rec.get("dk_id")),
+        )
+        if key in seen:
+            errs.append("duplicate_identity")
+        seen.add(key)
         rec["_schema_errors"] = errs
         out.append(rec)
     return out
 
 
-def index_evidence(rows: list[dict]) -> dict[str, dict]:
-    idx = {}
+def index_evidence(rows: list[dict], *, slate_id: str, slate_date: str) -> dict[str, dict]:
+    """Index only schema-valid rows whose slate matches the request.
+
+    Composite key required. DK ID alone is not identity.
+    """
+    idx: dict[str, dict] = {}
     for r in rows:
-        idx[str(r.get("dk_id"))] = r
-        idx[f"{r.get('mlb_id')}:{r.get('game_id')}"] = r
+        if r.get("_schema_errors"):
+            continue
+        if str(r.get("slate_id")) != str(slate_id):
+            continue
+        if str(r.get("slate_date")) != str(slate_date):
+            continue
+        dk = str(r.get("dk_id"))
+        mlb = str(r.get("mlb_id"))
+        game = str(r.get("game_id"))
+        idx[f"{slate_date}|{slate_id}|{game}|{mlb}|{dk}"] = r
     return idx
+
+
+def lookup_evidence(
+    idx: dict[str, dict],
+    *,
+    slate_date: str,
+    slate_id: str,
+    game_id: str,
+    mlb_id: str,
+    dk_id: str,
+) -> dict | None:
+    if not (slate_date and slate_id and game_id and mlb_id and dk_id):
+        return None
+    return idx.get(f"{slate_date}|{slate_id}|{game_id}|{mlb_id}|{dk_id}")
+
+
+def schema_errors(rows: list[dict]) -> list[str]:
+    out = []
+    for r in rows:
+        for e in r.get("_schema_errors") or []:
+            out.append(f"{r.get('dk_id')}:{e}")
+    return out

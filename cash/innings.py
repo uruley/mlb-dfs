@@ -10,7 +10,9 @@ def parse_innings(value) -> float:
     """Convert baseball IP (X.Y with Y in 0..2) to decimal innings (outs/3)."""
     if value is None or value == "":
         raise ValueError("missing innings")
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, bool):
+        raise ValueError("invalid innings")
+    if isinstance(value, (int, float)):
         s = f"{value}"
     else:
         s = str(value).strip()
