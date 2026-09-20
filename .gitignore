@@ -43,3 +43,8 @@ sources/*.json
 sources/savant-*.csv
 lab/projections-*-summary.txt
 lab/sim-results-*-summary.txt
+
+# Explicit fixtures committed for LLM coordination
+!fixtures/
+!fixtures/**/
+!fixtures/**/*.csv
