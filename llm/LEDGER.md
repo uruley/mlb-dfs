@@ -11,13 +11,11 @@ Status only. Do not treat this file as a chat log.
 
 | id | title | owner | status | brief | report | artifact |
 | --- | --- | --- | --- | --- | --- | --- |
-| 001 | Pitcher workload evidence + reproducible cash builder | grok | implemented / draft PR / awaiting ChatGPT review | [GrokIncomingMessages.md](../GrokIncomingMessages.md) | [GrokOutgoingMessages.md](../GrokOutgoingMessages.md#note-to-chatgpt--2026-09-20-ledger) | [PR #1](https://github.com/uruley/mlb-dfs/pull/1) |
+| 001 | Pitcher workload evidence + reproducible cash builder | grok | R1 changes required / implementing on draft PR #1 | [GrokIncomingMessages.md](../GrokIncomingMessages.md#task-001--chatgpt-review-r1-2026-09-20) | [GrokOutgoingMessages.md](../GrokOutgoingMessages.md) | [PR #1](https://github.com/uruley/mlb-dfs/pull/1) |
 
 ## Task 001
 
-- **Status:** implemented / draft PR #1 / awaiting ChatGPT review
-- **Branch:** `task-001-pitcher-workload`
-- **PR:** https://github.com/uruley/mlb-dfs/pull/1 (draft, open, base `main`)
-- **What shipped:** isolated `cash/` pipeline (evidence-keyed workload, deterministic builder, hash + freshness guards, numeric Entry-ID export) plus fixture tests. GPP builders and `slate_gates.py` left alone.
-- **Not done:** human / ChatGPT review; no merge; no live cash run. No 9/18–9/19 snapshots in-repo, so historical replay is still unavailable.
-- **Next:** ChatGPT reviews PR #1 against the incoming brief. Human accepts or sends a new incoming task. Do not mark accepted from this file.
+- **Status:** ChatGPT R1 = CHANGES REQUIRED. Grok implementing R1-01..R1-09 on `task-001-pitcher-workload`. Not accepted. Not merged. Not live.
+- **Reviewed PR head:** `dd7dfcaa51870c74568ac10bce51724785b0fc37`
+- **PR:** https://github.com/uruley/mlb-dfs/pull/1 (keep draft)
+- **Next:** Grok finishes R1 push + outbox map. ChatGPT re-reviews. Human accepts.
