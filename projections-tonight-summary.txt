@@ -1,0 +1,61 @@
+DK MLB Classic Projections — MEAN rebuild (process audit)
+================================================================
+Slate date: 2026-09-19
+Updated: 2026-09-19 17:08 CDT
+Games (8): ATL@HOU; MIA@SD; MIN@LAA; NYY@ARI; SEA@COL; SF@LAD; TOR@TEX; WSH@STL
+Player count: 753 (100% dk_id overlap with pool; missing=0 extra=0)
+
+Method:
+  Own-model MEAN projections (free data only; no Savant uplift).
+  1. MLB StatsAPI schedule hydrate=probablePitcher,lineups for 2026-09-19.
+  2. True DK-SP probables tagged probable_sp (11); DK-RP MLB-probables capped as probable_opener (5) — Mayza rule.
+  3. Non-probable SPs ~0.5–0.8.
+  4. Posted batting orders used for 14 teams (ARI, ATL, COL, HOU, LAD, MIA, NYY, SD, SEA, SF, STL, TEX, TOR, WSH).
+  5. Salary-rank / role proxies for teams without posted LU: LAA, MIN.
+  6. Hitters: salary→FP × order/slot × park × opp SP × team offense.
+  7. DK-SP starters: IP/K/WHIP/W from salary tier + park + opp offense.
+  8. DK-RP MLB-probables: opener/relief ≤~1.0–1.5 IP equiv FP (never starter means).
+  Sources: probable_sp | probable_opener | posted | salary_rank | non_starter | rp
+
+MLB probable TRUE DK-SPs (StatsAPI, slate only) — 11:
+  LAD Tarik Skubal           SP  $10800 22.47  probable SP (MLB StatsAPI 2026-09-19); IP~6.4
+  NYY Cam Schlittler         SP  $11500 22.21  probable SP (MLB StatsAPI 2026-09-19); IP~6.4
+  MIN Joe Ryan               SP  $9900  19.15  probable SP (MLB StatsAPI 2026-09-19); IP~6.1
+  LAA Reid Detmers           SP  $8900  17.59  probable SP (MLB StatsAPI 2026-09-19); IP~5.9
+  MIA Eury Perez             SP  $8400  15.23  probable SP (MLB StatsAPI 2026-09-19); IP~5.7; pitcher park boost
+  TOR Jose Soriano           SP  $8200  12.39  probable SP (MLB StatsAPI 2026-09-19); IP~5.7
+  ARI Brandon Pfaadt         SP  $7200  11.56  probable SP (MLB StatsAPI 2026-09-19); IP~5.5; tough offense
+  SD  Casey Mize             SP  $6700   9.66  probable SP (MLB StatsAPI 2026-09-19); IP~5.5; pitcher park boost; soft off
+  STL Michael McGreevy       SP  $6000   9.07  probable SP (MLB StatsAPI 2026-09-19); IP~5.3; pitcher park boost; soft off
+  SF  Yunior Marte           SP  $4000   7.11  probable SP (MLB StatsAPI 2026-09-19); IP~4.7; tough offense
+  SEA Bryce Miller           SP  $5900   7.00  probable SP (MLB StatsAPI 2026-09-19); IP~5.3; Coors risk; soft offense
+
+DK-RP MLB-probables CAPPED as openers (Mayza) — 5:
+  TEX Cal Quantrill          RP  $8700   4.65  probable opener/RP (MLB StatsAPI 2026-09-19) but DK=RP — capped opener workload 
+  WSH Andrew Alvarez         RP  $6500   3.86  probable opener/RP (MLB StatsAPI 2026-09-19) but DK=RP — capped opener workload 
+  HOU Hayden Wesneski        RP  $7900   3.85  probable opener/RP (MLB StatsAPI 2026-09-19) but DK=RP — capped opener workload 
+  ATL Grant Holmes           RP  $6300   3.27  probable opener/RP (MLB StatsAPI 2026-09-19) but DK=RP — capped opener workload 
+  COL Jose Quintana          RP  $5000   2.57  probable opener/RP (MLB StatsAPI 2026-09-19) but DK=RP — capped opener workload 
+
+Top 5 overall by proj_fp:
+   1. Tarik Skubal           SP     LAD $10800 22.47  [probable_sp]
+   2. Cam Schlittler         SP     NYY $11500 22.21  [probable_sp]
+   3. Joe Ryan               SP     MIN $9900  19.15  [probable_sp]
+   4. Reid Detmers           SP     LAA $8900  17.59  [probable_sp]
+   5. Randy Arozarena        OF     SEA $6200  16.50  [posted]
+
+Top 10 overall by proj_fp:
+   1. Tarik Skubal           SP     LAD $10800 22.47  [probable_sp]
+   2. Cam Schlittler         SP     NYY $11500 22.21  [probable_sp]
+   3. Joe Ryan               SP     MIN $9900  19.15  [probable_sp]
+   4. Reid Detmers           SP     LAA $8900  17.59  [probable_sp]
+   5. Randy Arozarena        OF     SEA $6200  16.50  [posted]
+   6. Eury Perez             SP     MIA $8400  15.23  [probable_sp]
+   7. Shohei Ohtani          1B/OF  LAD $6500  14.77  [salary_rank]
+   8. Jake McCarthy          OF     COL $5600  14.50  [posted]
+   9. Cal Raleigh            C      SEA $5700  14.45  [posted]
+  10. Hunter Goodman         C      COL $5900  14.34  [posted]
+
+Output: /home/box/mlb-dfs/projections-tonight.csv
+Backup: /home/box/mlb-dfs/projections-tonight-pre-0919.csv
+Note: Cash gates / Mad Scientist NOT applied in this MEAN pass.

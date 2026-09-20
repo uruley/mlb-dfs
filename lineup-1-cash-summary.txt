@@ -1,0 +1,24 @@
+lineup-1-cash READY 2026-09-19
+paths: /home/box/mlb-dfs/lineup-1-cash.csv
+       /home/box/mlb-dfs/lineup-1-cash-LOCK-LINEUP-UPLOAD.csv
+       /home/box/mlb-dfs/lineup-1-cash-ENTRIES-UPLOAD.csv (numeric Entry IDs: 3)
+
+  P  Reid Detmers (44196619) $8900 LAA SP adj=18.47 elite
+  P  Casey Mize (44196627) $6700 SD SP adj=10.14 elite
+  C  Cal Raleigh (44196643) $5700 SEA C adj=14.45 smash
+  1B TJ Rumfield (44196694) $4300 COL 1B adj=10.94 smash
+  2B Connor Norby (44196702) $4200 COL 2B/3B adj=10.29
+  3B Jose Fermin (44196833) $2900 STL 2B/3B adj=4.72
+  SS Thomas Saggese (44196812) $3100 STL 2B/SS adj=5.03
+  OF Randy Arozarena (44196639) $6200 SEA OF adj=16.50 smash
+  OF Julio Rodriguez (44196660) $5100 SEA OF adj=13.45 smash
+  OF Nathan Lukes (44196828) $2900 TOR OF adj=4.69
+
+salary: 50000
+proj_sum: 108.68
+SP: Reid Detmers / Casey Mize
+stack: {'SEA': 3, 'COL': 2, 'STL': 2, 'TOR': 1}
+avg_bat: 10.01
+validation: PASS — DK SP only, CASH_EXCLUDE_DK_RP, stack≤4, ≤50k, numeric Entry IDs only
+note: cash floor prioritized over dual-$10k+ SPs (salary forced thin bats)
+GPP/multiplier: untouched

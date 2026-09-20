@@ -1,0 +1,51 @@
+DK MLB Classic Projections — 2026-09-11
+==================================================
+Slate date: 2026-09-11
+Games: 12 (BAL@TOR, CIN@MIL, CLE@MIN, CWS@STL, HOU@TB, KC@BOS,
+        LAD@MIA, NYM@NYY, PHI@ATL, SD@SF, SEA@ATH, TEX@ARI)
+Player count: 1115
+
+Method: OWN MODEL (public full-slate DK FP feeds unavailable/thin).
+  - Probable starters tagged from FantasyPros (2026-09-11 grid).
+  - Hitters: salary→FP curve × order proxy × park × opp SP × team offense.
+  - SP starters: IP/K/WHIP/W from salary tier + park + opp offense.
+  - Non-starting SPs: near-zero (not pitching tonight).
+  - RP: IP/K floor by salary tier; Anthony Kay treated as SP (probable).
+  - Sources tags: own-model or own-model+fantasypros-probables
+  - Park factors: documented simple table (Rogers 102, Fenway 103,
+    Oracle 94, Busch 96, Yankee 101, loanDepot 97, etc.).
+
+Top 10 overall by proj_fp:
+   1. Blake Snell            SP     LAD $10700  22.4  [own-model+fantasypros-probables]
+   2. Chris Sale             SP     ATL $11000  22.0  [own-model+fantasypros-probables]
+   3. Parker Messick         SP     CLE $10200  21.0  [own-model+fantasypros-probables]
+   4. Drew Rasmussen         SP     TB  $9200   18.4  [own-model+fantasypros-probables]
+   5. Taj Bradley            SP     MIN $9500   18.1  [own-model+fantasypros-probables]
+   6. Nolan McLean           SP     NYM $9700   17.7  [own-model+fantasypros-probables]
+   7. Carlos Rodon           SP     NYY $8700   17.4  [own-model+fantasypros-probables]
+   8. Sonny Gray             SP     BOS $9000   17.4  [own-model+fantasypros-probables]
+   9. George Kirby           SP     SEA $8200   16.1  [own-model+fantasypros-probables]
+  10. Robbie Ray             SP     SD  $8000   15.5  [own-model+fantasypros-probables]
+
+Top 5 SP (probable starters):
+  1. Blake Snell            LAD $10700  22.4  probable SP (FantasyPros); IP~6.4; soft offense
+  2. Chris Sale             ATL $11000  22.0  probable SP (FantasyPros); IP~6.4; tough offense
+  3. Parker Messick         CLE $10200  21.0  probable SP (FantasyPros); IP~6.1
+  4. Drew Rasmussen         TB  $9200   18.4  probable SP (FantasyPros); IP~5.9
+  5. Taj Bradley            MIN $9500   18.1  probable SP (FantasyPros); IP~6.1
+
+Top 5 hitters:
+  1. Junior Caminero        3B     TB  $6400   14.8
+  2. Randy Arozarena        OF     SEA $5900   14.0
+  3. Elly De La Cruz        SS     CIN $5900   13.1
+  4. Wilyer Abreu           OF     BOS $5500   13.1
+  5. Fernando Tatis Jr.     2B/OF  SD  $6300   13.0
+
+Caveats:
+  - No paid/optimizer projection blend; public scrapes were incomplete for this slate.
+  - Probables can change; refresh if FantasyPros/team announce scratches.
+  - Hitter PT/order inferred from salary rank within team (no confirmed lineups).
+  - Non-starting SPs intentionally ~0.5–0.8 FP.
+  - Caps applied to avoid unrealistic ceilings without component stats.
+
+Output: /home/box/mlb-dfs/projections-tonight.csv

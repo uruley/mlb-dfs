@@ -1,0 +1,7 @@
+DraftKings MLB Classic constraints for DFS Builder
+- Salary cap: $50,000
+- Roster: 2P, C, 1B, 2B, 3B, SS, 3OF
+- Max 5 hitters from one team per lineup (pitchers do NOT count)
+- Soft player exposure ~40%
+- Output: Name (ID) cells, header P,P,C,1B,2B,3B,SS,OF,OF,OF
+- Never overwrite lineups-50-tonight.csv once delivered; use -v2 for upgrades

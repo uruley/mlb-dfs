@@ -1,0 +1,39 @@
+lineup_count: 20
+salary_min: 48600
+salary_avg: 49640.0
+salary_max: 50000
+proj_fp_sum_min: 125.40
+proj_fp_sum_avg: 128.92
+proj_fp_sum_max: 134.20
+adj_proj_sum_avg: 141.60
+unique_lineups: 20
+unique_pitcher_pairs: 17
+validation_pass: 20
+validation_fail: 0
+gates: smash_bat boost + elite_sp 40% target + dead_weight exclude/cap
+eligible_SPs: 10 (Tyler Glasnow, Walbert Urena, Michael King, Ranger Suarez, Daniel Espino, Cesar Perdomo, Connor Prielipp, Andrew Alvarez, Randy Dobnak, Tyler Phillips)
+elite_SP_exposure:
+  Tyler Glasnow: 8/20 (target 8)
+  Walbert Urena: 5/20 (target 8)
+  Daniel Espino: 6/20 (target 8)
+  Cesar Perdomo: 8/20 (target 8)
+
+top_15_player_exposures:
+  Carter Jensen (KC): 8/20 (40.0%) proj=11.8 adj=12.91 sal=4600 [smash_bat]
+  Tyler Glasnow (LAD): 8/20 (40.0%) proj=24.7 adj=24.70 sal=10700 [elite_sp]
+  Cesar Perdomo (SF): 8/20 (40.0%) proj=16.4 adj=16.40 sal=6100 [elite_sp]
+  CJ Abrams (WSH): 8/20 (40.0%) proj=14.1 adj=15.53 sal=5800 [smash_bat]
+  Fernando Tatis Jr. (SD): 7/20 (35.0%) proj=17.1 adj=21.38 sal=6500 [smash_bat]
+  Max Muncy (LAD): 7/20 (35.0%) proj=12.3 adj=12.85 sal=4600 [smash_bat]
+  Bobby Witt Jr. (KC): 7/20 (35.0%) proj=16.2 adj=20.25 sal=6000 [smash_bat]
+  Daniel Espino (CLE): 6/20 (30.0%) proj=17.2 adj=17.20 sal=5900 [elite_sp]
+  Roman Anthony (BOS): 6/20 (30.0%) proj=14.1 adj=17.07 sal=5200 [smash_bat]
+  Tyler Phillips (MIA): 5/20 (25.0%) proj=13.0 adj=13.00 sal=5100
+  Manny Machado (SD): 5/20 (25.0%) proj=13.8 adj=15.47 sal=5500 [smash_bat]
+  Mickey Gasper (BOS): 5/20 (25.0%) proj=11.3 adj=13.93 sal=4100 [smash_bat]
+  Wilyer Abreu (BOS): 5/20 (25.0%) proj=14.9 adj=17.89 sal=5600 [smash_bat]
+  Walbert Urena (LAA): 5/20 (25.0%) proj=19.2 adj=19.20 sal=8100 [elite_sp]
+  James Wood (WSH): 5/20 (25.0%) proj=16.4 adj=20.50 sal=6100 [smash_bat]
+
+players_over_40pct_exposure: none
+kike_hernandez_excluded: yes (44119005)

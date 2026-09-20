@@ -1,0 +1,5 @@
+Night Dime Time contest 195543450 — Sep 12
+Field 1189 | our 20 matched (hdbandit, EntryIds 5251905651–5251905670)
+Best #67 (174.65) | Worst #1060 (64.55)
+Avg 116.38 vs field 114.52 | top20% 2/20
+CSV-verified (see night-195543450-notes.md). Manager/one-liner had ~1185 / 114.9 / 174.7 / 64.6.

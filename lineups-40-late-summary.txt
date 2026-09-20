@@ -1,0 +1,36 @@
+lineup_count: 40
+salary_avg: 49695.0 (48600-50000)
+proj_fp_sum_avg: 121.69 (min 104.09 max 127.46)
+adj_proj_sum_avg: 136.33
+unique_lineups: 40
+validation_pass: 40
+max_exposure_cap: 16/40 (40%)
+gates: lab/builder-gates-late.csv (probable SPs force-kept)
+hitter_pool: posted + tbd_team (SEA/ATH/ARI/TEX)
+eligible_SPs: 10
+
+elite_or_target_SP_exposure:
+  Bryan Woo: 15/40 (target 20)
+  Kyle Leahy: 9/40 (target 16)
+  Shane Drohan: 9/40 (target 16)
+  Brandon Pfaadt: 10/40 (target 16)
+  Tim Mayza: 12/40 (target 16)
+
+top_15_exposures:
+  Miguel Vargas (CWS): 16/40 (40%) proj=14.4 adj=18.0 [smash]
+  Brice Turang (MIL): 16/40 (40%) proj=12.6 adj=13.9 [smash]
+  Bryan Woo (SEA): 15/40 (38%) proj=18.3 adj=18.3
+  Elly De La Cruz (CIN): 15/40 (38%) proj=14.6 adj=18.3 [smash]
+  Bryce Harper (PHI): 14/40 (35%) proj=14.4 adj=18.1 [smash]
+  JJ Bleday (CIN): 13/40 (32%) proj=11.2 adj=12.8 [smash]
+  Kumar Rocker (TEX): 12/40 (30%) proj=15.0 adj=15.0
+  Tim Mayza (PHI): 12/40 (30%) proj=11.8 adj=11.8 [elite]
+  Ronald Acuna Jr. (ATL): 12/40 (30%) proj=14.4 adj=17.7 [smash]
+  Drake Baldwin (ATL): 11/40 (28%) proj=12.3 adj=15.3 [smash]
+  Sam Antonacci (CWS): 11/40 (28%) proj=11.4 adj=12.5 [smash]
+  Sal Stewart (CIN): 11/40 (28%) proj=13.1 adj=15.7 [smash]
+  Kyle Schwarber (PHI): 10/40 (25%) proj=15.0 adj=18.8 [smash]
+  Jake Bauers (MIL): 10/40 (25%) proj=12.5 adj=15.6 [smash]
+  Brandon Pfaadt (ARI): 10/40 (25%) proj=16.3 adj=16.3 [elite]
+
+players_over_40pct: none

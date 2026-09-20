@@ -1,0 +1,88 @@
+Savant-adjusted projection uplift — summary
+================================================
+
+Method
+------
+Base = blend_proj (fallback own/dff).
+Batters: savant_adj = blend * clip(0.08*z_xwoba + 0.03*z_barrel, ±0.18)
+Pitchers: savant_adj = blend * clip(0.1*z_xera + 0.0*z_hh_against, ±0.2)
+  (z_xera / z_hh inverted so lower xERA / hard-hit = positive)
+savant_proj = max(0.1, blend_proj + savant_adj)
+value = savant_proj / (salary/1000)
+No match / missing key metric → adj=0, reason=no_savant*
+
+Constants used
+--------------
+  xwoba_coef   = 0.08
+  barrel_coef  = 0.03
+  xera_coef    = 0.1
+  hh_coef      = 0.0
+  max_bat_pct  = 0.18
+  max_pit_pct  = 0.2
+  min_pa       = 50
+  std_floor    = 0.0001
+
+League anchors
+--------------
+  batter xwOBA: mean=0.3056 std=0.0370 n=167 (PA>=50)
+  batter barrel%: mean=7.4377 std=3.8661 n=167 (PA>=50)
+  pitcher xERA: mean=4.2751 std=1.0962 n=199 (PA>=50)
+  pitcher hard_hit%: mean=38.3015 std=6.1757 n=199 (PA>=50)
+
+Coverage
+--------
+  blend rows:           481
+  features rows:        481
+  features matched:     435
+  output rows:          481
+  nonzero savant_adj:   435
+    batters adjusted:   192
+    pitchers adjusted:  243
+  zero adj (pass-thru): 46
+
+Adjustment distribution (nonzero only)
+--------------------------------------
+  n:        435
+  mean adj: +0.0604
+  mean |adj|: 0.2420
+  min/max:  -1.2150 / +3.1904
+  p10 adj:  -0.2400
+  p50 adj:  -0.0030
+  p90 adj:  +0.2840
+  p10 |adj|: 0.0172
+  p90 |adj|: 0.6536
+
+Top 10 positive deltas (blend → savant)
+---------------------------------------
+  Tyler Glasnow          LAD  pitcher  21.52 →  24.71  (Δ+3.190)  pitcher:z_xera=+1.48*0.1;pct=+0.1483;clip=±0.2
+  Daniel Espino          CLE  pitcher  14.55 →  17.20  (Δ+2.648)  pitcher:z_xera=+1.82*0.1;pct=+0.1820;clip=±0.2
+  Fernando Tatis Jr.     SD   batter   14.51 →  17.12  (Δ+2.612)  batter:z_xwoba=+1.82*0.08+0.03*z_barrel(+1.28);pct=+0.1800;c
+  James Wood             WSH  batter   13.91 →  16.41  (Δ+2.504)  batter:z_xwoba=+2.96*0.08+0.03*z_barrel(+3.35);pct=+0.1800;c
+  Bobby Witt Jr.         KC   batter   13.75 →  16.23  (Δ+2.475)  batter:z_xwoba=+2.15*0.08+0.03*z_barrel(+1.18);pct=+0.1800;c
+  Mike Trout             LAA  batter   12.39 →  14.62  (Δ+2.230)  batter:z_xwoba=+1.93*0.08+0.03*z_barrel(+2.11);pct=+0.1800;c
+  Wilyer Abreu           BOS  batter   13.15 →  14.94  (Δ+1.789)  batter:z_xwoba=+1.20*0.08+0.03*z_barrel(+1.34);pct=+0.1360;c
+  Roman Anthony          BOS  batter   12.31 →  14.07  (Δ+1.764)  batter:z_xwoba=+1.28*0.08+0.03*z_barrel(+1.36);pct=+0.1433;c
+  Griffin Conine         MIA  batter    9.65 →  11.39  (Δ+1.737)  batter:z_xwoba=+1.61*0.08+0.03*z_barrel(+1.88);pct=+0.1800;c
+  Heriberto Hernandez    MIA  batter   10.47 →  12.11  (Δ+1.643)  batter:z_xwoba=+1.34*0.08+0.03*z_barrel(+1.67);pct=+0.1570;c
+
+Top 10 negative deltas (blend → savant)
+---------------------------------------
+  Matthew Lugo           KC   batter    6.75 →   5.54  (Δ-1.215)  batter:z_xwoba=-4.51*0.08+0.03*z_barrel(-1.92);pct=-0.1800;c
+  Tyler Heineman         LAA  batter    6.50 →   5.33  (Δ-1.170)  batter:z_xwoba=-1.75*0.08+0.03*z_barrel(-1.74);pct=-0.1800;c
+  Kyren Paris            LAA  batter    6.37 →   5.22  (Δ-1.147)  batter:z_xwoba=-2.05*0.08+0.03*z_barrel(-1.92);pct=-0.1800;c
+  Trevor Story           BOS  batter    8.01 →   6.87  (Δ-1.139)  batter:z_xwoba=-1.53*0.08+0.03*z_barrel(-0.66);pct=-0.1422;c
+  Graham Pauley          MIA  batter    6.88 →   5.79  (Δ-1.093)  batter:z_xwoba=-1.86*0.08+0.03*z_barrel(-0.35);pct=-0.1588;c
+  Jake Cronenworth       SD   batter    8.86 →   7.87  (Δ-0.995)  batter:z_xwoba=-0.96*0.08+0.03*z_barrel(-1.17);pct=-0.1123;c
+  Brooks Lee             MIN  batter   10.35 →   9.41  (Δ-0.938)  batter:z_xwoba=-0.83*0.08+0.03*z_barrel(-0.81);pct=-0.0906;c
+  Kyle Isbel             KC   batter    7.00 →   6.08  (Δ-0.922)  batter:z_xwoba=-1.21*0.08+0.03*z_barrel(-1.17);pct=-0.1318;c
+  Christian Koss         SF   batter    6.88 →   6.00  (Δ-0.884)  batter:z_xwoba=-1.37*0.08+0.03*z_barrel(-0.63);pct=-0.1284;c
+  David Fry              CLE  batter    6.75 →   5.89  (Δ-0.860)  batter:z_xwoba=-1.42*0.08+0.03*z_barrel(-0.45);pct=-0.1273;c
+
+Inputs / outputs
+----------------
+  blend:    /home/box/mlb-dfs/projections-blend-tonight.csv
+  features: /home/box/mlb-dfs/lab/features-savant-tonight.csv
+  out:      /home/box/mlb-dfs/projections-savant-tonight.csv
+  summary:  /home/box/mlb-dfs/lab/projections-savant-tonight-summary.txt
+
+Backtest tip: copy projections-savant-tonight.csv into lab/backtests/YYYY-MM-DD/projections.csv (keep savant_proj; or alias as blend_proj). Or: python3 backtest.py --demo --blend …/projections-savant-tonight.csv (demo prefers savant_proj when present).

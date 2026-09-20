@@ -1,0 +1,40 @@
+MLB DFS backtest — 2026-09-12 night 195543450
+=============================================
+proj_column:     proj_fp
+
+--- Overall ---
+n_matched:       122
+MAE:             6.5260
+RMSE:            8.5722
+Spearman:        0.4000
+Top-20% overlap: 0.2500
+
+--- Hitters ---
+n_matched:       106
+MAE:             6.5182
+RMSE:            8.4573
+Spearman:        0.3470
+Top-20% overlap: 0.3333
+
+--- Pitchers ---
+n_matched:       16
+MAE:             6.5775
+RMSE:            9.2973
+Spearman:        0.5197
+Top-20% overlap: 0.3333
+
+folder: /home/box/mlb-dfs/lab/backtests/2026-09-12
+contest: 195543450 $100 Dime Time Night
+source_projections: /home/box/mlb-dfs/projections-late.csv (late lock copy; live tonight NOT used)
+join: dk_id then normalized name
+field_n=1189 our_n=20 our_avg=116.3800 field_avg=114.5207
+our_best_rank=67 our_best_pts=174.65
+our_worst_rank=1060 our_worst_pts=64.55
+our_top20pct_rankcut=2/20 (rank<=237.8)
+--- Bias flags (descriptive) ---
+hitter low-sal (<4k): n=65 mean(proj-actual)=+0.016 (near-neutral)
+hitter mid-sal (4–5k): n=27 mean(proj-actual)=+0.923 (near-neutral)
+hitter high-sal (≥5k): n=14 mean(proj-actual)=+1.619 (OVER-proj)
+OF smash (actual≥20): n=4 mean(proj-actual)=-18.817 (UNDER-proj)
+  examples: Garrett Mitchell(proj=9.2,act=38), Michael Harris II(proj=11.3,act=34), Ronald Acuna Jr.(proj=14.4,act=26), Randy Arozarena(proj=10.8,act=23)
+pitchers overall: n=16 mean(proj-actual)=+5.086

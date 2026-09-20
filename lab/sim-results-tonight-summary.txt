@@ -1,0 +1,25 @@
+MLB DFS lab — Monte Carlo lineup simulation
+sims=5000  lineups=50  seed=42
+
+Top 5 by mean:
+  LU# 8  mean=97.55  p50=97.47  p90=113.14  p99=125.79  win=6.480%
+  LU# 3  mean=97.00  p50=97.07  p90=112.04  p99=123.70  win=5.820%
+  LU#32  mean=95.33  p50=95.48  p90=110.03  p99=121.57  win=3.300%
+  LU#16  mean=95.25  p50=95.30  p90=109.83  p99=122.44  win=4.320%
+  LU#49  mean=95.13  p50=95.09  p90=109.59  p99=121.24  win=2.880%
+
+Top 5 by p90:
+  LU# 8  p90=113.14  mean=97.55  p99=125.79  win=6.480%
+  LU# 3  p90=112.04  mean=97.00  p99=123.70  win=5.820%
+  LU#32  p90=110.03  mean=95.33  p99=121.57  win=3.300%
+  LU#16  p90=109.83  mean=95.25  p99=122.44  win=4.320%
+  LU#49  p90=109.59  mean=95.13  p99=121.24  win=2.880%
+
+Top 5 by win_rate_vs_field:
+  LU# 8  win=6.480%  mean=97.55  p90=113.14
+  LU# 3  win=5.820%  mean=97.00  p90=112.04
+  LU#16  win=4.320%  mean=95.25  p90=109.83
+  LU# 9  win=4.000%  mean=93.89  p90=107.97
+  LU#35  win=3.880%  mean=94.51  p90=109.07
+
+Full CSV: /home/box/mlb-dfs/lab/sim-results-tonight.csv

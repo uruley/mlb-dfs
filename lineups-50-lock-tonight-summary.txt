@@ -1,0 +1,35 @@
+lineup_count: 50
+salary_min: 49400
+salary_avg: 49858.0
+salary_max: 50000
+proj_fp_sum_min: 92.30
+proj_fp_sum_avg: 98.56
+proj_fp_sum_max: 104.20
+unique_lineups: 50
+unique_pitcher_pairs: 48
+validation_pass: 50
+validation_fail: 0
+eligible_SPs: 22
+eligible_hitters: 194
+tbd_teams: ATH,LAD,SD,SEA,SF,TEX
+max_hitters_per_team_enforced: 5
+min_games_enforced: 2
+
+top_15_player_exposures:
+  Ryan Gusto (MIA): 11/50 (22.0%) proj=8.4 sal=5700
+  Elly De La Cruz (CIN): 11/50 (22.0%) proj=13.5 sal=5900
+  Fernando Tatis Jr. (SD): 10/50 (20.0%) proj=14.0 sal=6300 [TBD]
+  Max Muncy (LAD): 10/50 (20.0%) proj=9.6 sal=4400 [TBD]
+  Roman Anthony (BOS): 9/50 (18.0%) proj=12.0 sal=5000
+  Colton Cowser (BAL): 9/50 (18.0%) proj=4.4 sal=2500
+  Freddie Freeman (LAD): 9/50 (18.0%) proj=11.7 sal=4800 [TBD]
+  Wilyer Abreu (BOS): 8/50 (16.0%) proj=12.2 sal=5500
+  Chris Bassitt (BAL): 8/50 (16.0%) proj=8.9 sal=5500
+  Jeffrey Springs (ATH): 8/50 (16.0%) proj=10.1 sal=6000
+  Mookie Betts (LAD): 8/50 (16.0%) proj=10.5 sal=4800 [TBD]
+  Mickey Gasper (BOS): 7/50 (14.0%) proj=8.6 sal=3900
+  Brice Turang (MIL): 7/50 (14.0%) proj=10.5 sal=5200
+  Yandy Diaz (TB): 7/50 (14.0%) proj=11.0 sal=4900
+  Ketel Marte (ARI): 7/50 (14.0%) proj=10.3 sal=4400
+
+players_over_40pct_exposure: none

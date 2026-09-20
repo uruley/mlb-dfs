@@ -1,0 +1,4 @@
+Sep 11 DK Dime Time backtest
+
+$100 (195514318): field 1189 | our 20 | best #113 (142.85 pts) | avg 98.0 vs field 107.6
+$300 (195514320): field 3561 | our 20 | best #99 (161.1 pts) | avg 95.1 vs field 105.0 | top20% 5/20

@@ -1,0 +1,27 @@
+MLB DFS backtest — 2026-09-12 night 195543450 (adjusted_proj / gated)
+=====================================================================
+proj_column:     adjusted_proj
+
+--- Overall ---
+n_matched:       122
+MAE:             6.7833
+RMSE:            8.7291
+Spearman:        0.4089
+Top-20% overlap: 0.3333
+
+--- Hitters ---
+n_matched:       106
+MAE:             6.8143
+RMSE:            8.6401
+Spearman:        0.3530
+Top-20% overlap: 0.3333
+
+--- Pitchers ---
+n_matched:       16
+MAE:             6.5775
+RMSE:            9.2973
+Spearman:        0.5197
+Top-20% overlap: 0.3333
+
+source: /home/box/mlb-dfs/lab/backtests/2026-09-12/projections-late-gated.csv
+note: gated adjusted_proj; lab copy only

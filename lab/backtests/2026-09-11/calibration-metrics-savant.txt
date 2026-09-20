@@ -1,0 +1,34 @@
+MLB DFS backtest — 2026-09-11
+=============================
+proj_column:     savant_proj
+
+--- Overall ---
+n_matched:       297
+MAE:             5.2661
+RMSE:            7.1410
+Spearman:        0.3916
+Top-20% overlap: 0.3220
+
+--- Hitters ---
+n_matched:       270
+MAE:             5.0577
+RMSE:            6.8716
+Spearman:        0.3723
+Top-20% overlap: 0.3148
+
+--- Pitchers ---
+n_matched:       27
+MAE:             7.3503
+RMSE:            9.4204
+Spearman:        0.5092
+Top-20% overlap: 0.2000
+
+folder: /home/box/mlb-dfs/lab/backtests/2026-09-11
+join: dk_id then normalized name
+--- Bias flags (descriptive) ---
+hitter low-sal (<4k): n=180 mean(proj-actual)=-0.740 (near-neutral)
+hitter mid-sal (4–5k): n=62 mean(proj-actual)=+0.380 (near-neutral)
+hitter high-sal (≥5k): n=28 mean(proj-actual)=+2.750 (OVER-proj)
+OF smash (actual≥20): n=12 mean(proj-actual)=-16.397 (UNDER-proj)
+  examples: Kyle Tucker(proj=7.6,act=35), Garrett Mitchell(proj=6.0,act=30), Jackson Chourio(proj=12.7,act=26), Lawrence Butler(proj=8.0,act=24), Angel Martinez(proj=4.0,act=23), Brett Bateman(proj=6.8,act=22), Cody Bellinger(proj=9.0,act=21), Dustin Harris(proj=1.5,act=21)
+pitchers overall: n=27 mean(proj-actual)=+2.129

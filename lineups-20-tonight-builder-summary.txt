@@ -1,0 +1,30 @@
+lineup_count: 20
+salary_avg: 49660.0 (49000-50000)
+proj_fp_sum_avg: 139.53 (min 129.49 max 150.51)
+shipped_proj_avg: 141.60
+builder_vs_shipped_delta: -2.07
+unique_lineups: 20
+validation_pass: 20
+source: projections-tonight-gated.csv
+glasnow_soft_cap: 10/20
+kike_excluded: yes
+
+elite_SP_exposure:
+  Tyler Glasnow: 10/20 (target 10)
+  Walbert Urena: 5/20 (target 8)
+  Daniel Espino: 4/20 (target 8)
+  Cesar Perdomo: 6/20 (target 8)
+
+top_12_exposures:
+  Tyler Glasnow (LAD): 10/20 (50%) proj=24.7 elite
+  Adley Rutschman (BOS): 8/20 (40%) proj=10.8 smash
+  Fernando Tatis Jr. (SD): 8/20 (40%) proj=21.4 smash
+  Manny Machado (SD): 7/20 (35%) proj=15.5 smash
+  Mookie Betts (LAD): 6/20 (30%) proj=13.7 smash
+  Cesar Perdomo (SF): 6/20 (30%) proj=16.4 elite
+  Bobby Witt Jr. (KC): 6/20 (30%) proj=20.2 smash
+  Luis Campusano (SD): 5/20 (25%) proj=10.8 smash
+  CJ Abrams (WSH): 5/20 (25%) proj=15.5 smash
+  James Wood (WSH): 5/20 (25%) proj=20.5 smash
+  Walbert Urena (LAA): 5/20 (25%) proj=19.2 elite
+  Mickey Gasper (BOS): 5/20 (25%) proj=13.9 smash

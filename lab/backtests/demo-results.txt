@@ -1,0 +1,13 @@
+MLB DFS backtest DEMO results
+=============================
+n_matched:       80
+MAE:             1.7912
+RMSE:            2.1698
+Spearman:        0.6038
+Top-20% overlap: 0.8125
+
+source_blend: /home/box/mlb-dfs/projections-blend-tonight.csv
+demo_folder:  /home/box/mlb-dfs/lab/backtests/demo
+seed:         42
+sample_n:     80
+note: actuals are synthetic (proj + noise); not real slate results.

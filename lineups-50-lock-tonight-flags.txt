@@ -1,0 +1,94 @@
+LOCK REBUILD FLAGS
+TBD teams (top-proj hitters allowed): ATH, LAD, SD, SEA, SF, TEX
+
+SP notes:
+  PIT: MISSING Wilber Dotel
+  CHC: MISSING Shota Imanaga
+  COL: MISSING Mason Adams
+  DET: MISSING Framber Valdez
+  LAA: MISSING Yusei Kikuchi
+  WSH: MISSING Cade Cavalli
+  NYM: Nolan McLean (44099335)
+  NYY: Carlos Rodon (44099339)
+  BAL: Chris Bassitt (44099354)
+  TOR: Max Scherzer (44099347)
+  KC: Seth Lugo (44099351)
+  BOS: Sonny Gray (44099338)
+  HOU: Miguel Ullola (44100207)
+  TB: Drew Rasmussen (44099337)
+  MIA: Ryan Gusto (44099353)
+  PHI: Aaron Nola (44099342)
+  ATL: Chris Sale (44099332)
+  CIN: Andrew Abbott (44099346)
+  MIL: Dustin May (44100036)
+  CLE: Parker Messick (44099334)
+  MIN: Taj Bradley (44099336)
+  CWS: Anthony Kay (44100065)
+  STL: Matthew Liberatore (44099345)
+  SEA: George Kirby (44099340)
+  ATH: Jeffrey Springs (44099352)
+  TEX: MacKenzie Gore (44100024)
+  ARI: Merrill Kelly (44099349)
+  SD: Robbie Ray (44099341)
+  SF: Anthony Molina (44099343)
+  LAD: FALLBACK top proj SP Blake Snell (44099333)
+
+Hitter pool notes:
+  MIL: posted matched 9/9
+  NYY: posted matched 9/9
+  PHI: posted matched 9/9
+  ATL: posted matched 9/9
+  TOR: posted matched 9/9
+  LAD: TBD top14 proj hitters
+  CLE: posted matched 9/9
+  NYM: posted matched 9/9
+  MIN: posted matched 9/9
+  HOU: posted matched 9/9
+  SEA: TBD top14 proj hitters
+  TB: posted matched 9/9
+  BOS: posted matched 9/9
+  TEX: TBD top14 proj hitters
+  CIN: posted matched 9/9
+  MIA: posted matched 9/9
+  CWS: posted matched 9/9
+  KC: posted matched 9/9
+  STL: posted matched 9/9
+  SD: TBD top14 proj hitters
+  ARI: posted matched 9/9
+  BAL: posted matched 9/9
+  SF: TBD top14 proj hitters
+  ATH: TBD top14 proj hitters
+
+TBD hitter usage in final 50:
+  Fernando Tatis Jr. (SD): 10/50
+  Max Muncy (LAD): 10/50
+  Freddie Freeman (LAD): 9/50
+  Mookie Betts (LAD): 8/50
+  Randy Arozarena (SEA): 6/50
+  Corey Seager (TEX): 6/50
+  Teoscar Hernandez (LAD): 6/50
+  Tommy Edman (LAD): 6/50
+  Cal Raleigh (SEA): 5/50
+  Dominic Canzone (SEA): 5/50
+  Tommy White (ATH): 4/50
+  Julio Rodriguez (SEA): 4/50
+  Manny Machado (SD): 3/50
+  Jackson Merrill (SD): 3/50
+  Wyatt Langford (TEX): 3/50
+  Cole Young (SEA): 2/50
+  Ezequiel Duran (TEX): 2/50
+  Andy Pages (LAD): 2/50
+  Josh Naylor (SEA): 2/50
+  Xander Bogaerts (SD): 2/50
+  Austin Hays (SD): 2/50
+  Zack Gelof (ATH): 2/50
+  Will Smith (LAD): 2/50
+  Shea Langeliers (ATH): 1/50
+  Lawrence Butler (ATH): 1/50
+  Joc Pederson (TEX): 1/50
+  Kyle Tucker (LAD): 1/50
+  Taylor Ward (SEA): 1/50
+  J.P. Crawford (SEA): 1/50
+  Henry Bolte (ATH): 1/50
+  Brandon Nimmo (TEX): 1/50
+  Jeff McNeil (ATH): 1/50

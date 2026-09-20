@@ -1,0 +1,74 @@
+DK MLB Classic Projections — LATE SLATE PRE-SAVANT BASE
+=======================================================
+Slate date: 2026-09-12
+Updated: 2026-09-12 21:07 UTC (CSV on disk; this summary documents the live file)
+Role: PRE-SAVANT BASE for Mad Scientist (Savant uplift + Sep 11 gates owned by them)
+Active file: /home/box/mlb-dfs/projections-late.csv
+Do NOT treat as production post-Savant. Early slate (projections-tonight.csv) untouched.
+
+Games (5): CIN@MIL 07:10PM ET, PHI@ATL 07:15PM ET, CWS@STL 07:15PM ET,
+           TEX@ARI 08:10PM ET, SEA@ATH 09:40PM ET
+Teams: ARI, ATH, ATL, CIN, CWS, MIL, PHI, SEA, STL, TEX
+Player count: 465 (100% dk_id overlap with dk-classic-player-pool-late.csv)
+
+Method (base only; Savant NOT applied here):
+  1. MLB StatsAPI schedule hydrate=probablePitcher (2026-09-12) — only those
+     10 arms get real starter projections. Other SPs ~0.6 (non_starter).
+  2. Posted batting orders from StatsAPI live feed for CIN@MIL, PHI@ATL,
+     CWS@STL (9/team). TEX@ARI and SEA@ATH were Scheduled / no order yet
+     → salary-rank PT (tbd_team starters / bench floor).
+  3. Hitters: salary + AvgPointsPerGame prior + order/role proxy + park
+     + opp SP quality. Posted keep starter PT; not_in_order stay on a
+     PH/bench floor (~1.3–1.7).
+  4. DFF SKIPPED — no late-slate free file; sources/dailyfantasyfuel-tonight.csv
+     is 2026-09-11 (wrong slate).
+  5. Savant uplift + Sep 11 gates: Mad Scientist (lab/builder-gates-late.csv,
+     projections-late-gated.csv). This file is the input base (savant_adj=0).
+
+Schema on disk:
+  dk_id,name,position,team,salary,game_info,proj_fp,pos,source,game,savant_adj
+  (volatility/sources/notes not on this drop; source tags the role)
+
+Source counts:
+  non_starter 250 | not_in_order 67 | posted 54 | tbd_team 44 | bench 40 | probable_sp 10
+
+MLB probable SPs (StatsAPI 2026-09-12, late games only):
+  SEA Bryan Woo              SP  $8500  18.32  probable_sp  SEA@ATH
+  STL Kyle Leahy             RP  $8000  17.60  probable_sp  CWS@STL
+  MIL Shane Drohan           RP  $7400  16.73  probable_sp  CIN@MIL
+  ARI Brandon Pfaadt         SP  $7100  16.30  probable_sp  TEX@ARI
+  ATL Tyler Mahle            SP  $7000  16.15  probable_sp  PHI@ATL
+  ATH Gage Jump              SP  $6800  15.86  probable_sp  SEA@ATH
+  CIN Brady Singer           SP  $6300  15.13  probable_sp  CIN@MIL
+  TEX Kumar Rocker           SP  $6200  14.99  probable_sp  TEX@ARI
+  PHI Tim Mayza              RP  $4000  11.80  probable_sp  PHI@ATL  (opener-priced)
+  CWS Sean Newcomb           RP  $4000  11.80  probable_sp  CWS@STL  (opener-priced)
+
+Top 10 overall by proj_fp:
+   1. Bryan Woo              SP     SEA $8500   18.32  [probable_sp]
+   2. Kyle Leahy             RP     STL $8000   17.60  [probable_sp]
+   3. Shane Drohan           RP     MIL $7400   16.73  [probable_sp]
+   4. Brandon Pfaadt         SP     ARI $7100   16.30  [probable_sp]
+   5. Tyler Mahle            SP     ATL $7000   16.15  [probable_sp]
+   6. Gage Jump              SP     ATH $6800   15.86  [probable_sp]
+   7. Brady Singer           SP     CIN $6300   15.13  [probable_sp]
+   8. Kyle Schwarber         1B     PHI $6100   15.03  [posted]
+   9. Kumar Rocker           SP     TEX $6200   14.99  [probable_sp]
+  10. Elly De La Cruz        SS     CIN $5700   14.61  [posted]
+
+Mean proj_fp: 3.422
+
+Caveats:
+  - This is the pre-Savant BASE. Mad Scientist owns Savant uplift + gates.
+  - Executor did NOT overwrite the live CSV after Mad Scientist began uplift
+    (hard stop). File timestamp 2026-09-12 21:07 UTC left as-is.
+  - Mayza ($4000) and Newcomb ($4000) are official probablePitcher but
+    opener-priced RP-listed; treated as starters per StatsAPI tag.
+  - TEX@ARI and SEA@ATH had no posted order at ingest (Scheduled) — tbd_team
+    / bench salary-rank proxy. Refresh if lineups post.
+  - DFF not blended (no late-slate free file; 9/11 file is stale).
+  - Probables can change; refresh StatsAPI if scratches post.
+  - Lineups NOT built from this file.
+  - projections-tonight.csv / early-slate files were not touched.
+
+Output: /home/box/mlb-dfs/projections-late.csv

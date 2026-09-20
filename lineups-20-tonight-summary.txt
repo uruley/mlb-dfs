@@ -1,0 +1,31 @@
+lineup_count: 20
+slate: 2026-09-13 afternoon
+salary_avg: 49840.0 (49500-50000)
+proj_fp_sum_avg: 121.91
+adj_proj_sum_avg: 130.30
+unique_lineups: 20
+validation_pass: 20
+max_exposure: 8/20 (SP1 soft 10)
+source: lab/backtests/2026-09-13/projections-gated.csv
+MS tweaks: unknown-own neutral + soften smash if proj>=14 (in gated file)
+sp1: Cam Schlittler
+
+elite_SP_exposure:
+  Cam Schlittler: 7/20 (target 10)
+  Dylan Cease: 5/20 (target 8)
+  Payton Tolle: 5/20 (target 8)
+  Chase Burns: 5/20 (target 8)
+
+top_12:
+  Emmanuel Rodriguez (MIN): 8/20 (40%) proj=6.4 adj=6.4
+  Cam Schlittler (NYY): 7/20 (35%) proj=24.1 adj=24.1 elite
+  Nick Morabito (NYM): 7/20 (35%) proj=6.5 adj=6.5
+  Chase Burns (CIN): 5/20 (25%) proj=18.8 adj=18.8 elite
+  Michael Busch (CHC): 5/20 (25%) proj=10.3 adj=11.2 smash
+  Pete Crow-Armstrong (CHC): 5/20 (25%) proj=16.0 adj=18.0 smash
+  Seiya Suzuki (CHC): 5/20 (25%) proj=12.3 adj=13.9 smash
+  Payton Tolle (BOS): 5/20 (25%) proj=22.4 adj=22.4 elite
+  Dylan Cease (TOR): 5/20 (25%) proj=23.5 adj=23.5 elite
+  Ryan McMahon (NYY): 5/20 (25%) proj=6.5 adj=6.5
+  Francisco Lindor (NYM): 4/20 (20%) proj=11.5 adj=12.6 smash
+  Alex Freeland (LAD): 4/20 (20%) proj=5.9 adj=5.9

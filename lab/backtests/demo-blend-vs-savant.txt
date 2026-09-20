@@ -1,0 +1,17 @@
+blend (baseline)
+================
+n_matched:       80
+MAE:             1.7896
+RMSE:            2.1728
+Spearman:        0.6298
+Top-20% overlap: 0.7500
+
+savant uplift
+=============
+n_matched:       80
+MAE:             1.8622
+RMSE:            2.2691
+Spearman:        0.6336
+Top-20% overlap: 0.7500
+
+note: actuals synthetic from blend+noise; Savant vs blend comparison is illustrative only.

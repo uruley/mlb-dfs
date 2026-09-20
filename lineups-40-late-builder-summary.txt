@@ -1,0 +1,32 @@
+lineup_count: 40
+salary_avg: 49647.5 (47000-50000)
+proj_fp_sum_avg: 135.60 (min 111.73 max 151.86)
+live_lineups_40_late_proj_avg: 118.93
+builder_vs_live_delta: 16.66
+unique_lineups: 40
+validation_pass: 40
+source: projections-late-gated.csv
+rules: exclude dead_weight (Leahy/Singer out); smash posted-only; Woo soft 50%
+kike_n/a; tbd SEA/ATH/ARI/TEX allowed
+
+elite_SP_exposure:
+  Bryan Woo: 17/40 (target 20)
+  Shane Drohan: 9/40 (target 16)
+  Brandon Pfaadt: 9/40 (target 16)
+  Tyler Mahle: 11/40 (target 16)
+  Gage Jump: 10/40 (target 16)
+  Tim Mayza: 10/40 (target 16)
+
+top_12:
+  Bryan Woo (SEA): 17/40 (42%) proj=18.3 elite
+  Bryce Harper (PHI): 16/40 (40%) proj=18.1 smash
+  Ronald Acuna Jr. (ATL): 16/40 (40%) proj=17.7 smash
+  Miguel Vargas (CWS): 16/40 (40%) proj=18.0 smash
+  Brice Turang (MIL): 15/40 (38%) proj=13.9 smash
+  Bryson Stott (PHI): 13/40 (32%) proj=11.1 smash
+  Drake Baldwin (ATL): 13/40 (32%) proj=15.3 smash
+  Elly De La Cruz (CIN): 13/40 (32%) proj=18.3 smash
+  Jake Bauers (MIL): 13/40 (32%) proj=15.6 smash
+  Kyle Schwarber (PHI): 12/40 (30%) proj=18.8 smash
+  Tyler Mahle (ATL): 11/40 (28%) proj=16.1 elite
+  Jackson Chourio (MIL): 11/40 (28%) proj=15.9 smash

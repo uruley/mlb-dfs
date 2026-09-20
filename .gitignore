@@ -1,0 +1,45 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Ephemeral slate / lineup / entry dumps (regenerated nightly)
+*.csv
+!sources/.gitkeep
+dk-classic-*.csv
+projections*.csv
+lineups*.csv
+lineup-*.csv
+dfs-lineups*.csv
+entered-lineups*.csv
+cash-entries-template.csv
+*-ENTRIES*.csv
+*-UPLOAD*.csv
+
+# Local runtime / watcher
+lineup-watcher*.json
+.lock
+*.summary.txt
+
+# Lab outputs regenerated from scripts
+lab/builder-gates*.csv
+lab/builder-gates*.summary.txt
+lab/projections-*.csv
+lab/backtests/**/*.csv
+lab/backtests/**/dk-results/
+
+# OS
+.DS_Store
+
+# Runtime summaries / scraped HTML-JSON dumps (optional local cache)
+*.summary.txt
+*-summary.txt
+*-flags.txt
+lock-rebuild/
+sources/*.html
+sources/*.json
+sources/savant-*.csv
+lab/projections-*-summary.txt
+lab/sim-results-*-summary.txt
