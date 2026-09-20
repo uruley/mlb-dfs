@@ -1,0 +1,11 @@
+ID,Name,Position,TeamAbbrev,Salary,Game Info,game_id,mlb_id,slate_id,slate_date,scratched,posted
+p1,Starter A,RP,AAA,4000,AAA@BBB,g1,1,syn-1,2026-09-18,false,
+p2,Starter B,SP,BBB,5000,AAA@BBB,g1,2,syn-1,2026-09-18,,
+c1,Catch,C,AAA,3000,AAA@BBB,g1,,syn-1,2026-09-18,false,true
+b1,First,1B,AAA,3000,AAA@BBB,g1,,syn-1,2026-09-18,,true
+b2,Second,2B,BBB,3000,AAA@BBB,g1,,syn-1,2026-09-18,,true
+b3,Third,3B,BBB,3000,AAA@BBB,g1,,syn-1,2026-09-18,,true
+b4,Short,SS,CCC,3000,CCC@DDD,g2,,syn-1,2026-09-18,,true
+o1,OF1,OF,CCC,3000,CCC@DDD,g2,,syn-1,2026-09-18,,true
+o2,OF2,OF,CCC,3000,CCC@DDD,g2,,syn-1,2026-09-18,,true
+o3,OF3,OF,DDD,3000,CCC@DDD,g2,,syn-1,2026-09-18,,true
