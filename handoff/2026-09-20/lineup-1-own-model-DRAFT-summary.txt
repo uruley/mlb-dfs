@@ -1,0 +1,15 @@
+DRAFT only — not upload-ready. Posted lineups not confirmed.
+Model: repo own-model (salary/park/probable) + StatsAPI announced SPs 2026-09-20
+31/9 multiplier context. Maximizes provisional mean, not cash probability.
+Rules: $50k, Classic slots, max 2 hitters/team, no bats facing selected SPs, announced SPs only.
+salary=50000 unused=0 proj_sum=99.0
+P   Hunter Brown           SP       HOU $9500  18.0 44213409
+P   Jack Perkins           RP       ATH $5500  8.4 44213420
+C   Carson Kelly           C        CHC $3600  5.3 44213544
+1B  Christian Walker       1B       HOU $3400  5.5 44213566
+2B  Justin Foscue          2B       TEX $3300  5.0 44213579
+3B  Ezequiel Duran         3B/OF    TEX $3600  6.6 44213539
+SS  Matt McLain            2B/SS    CIN $3600  6.2 44213542
+OF  Pete Crow-Armstrong    OF       CHC $6700  16.3 44213425
+OF  Randy Arozarena        OF       SEA $6200  16.5 44213429
+OF  Dominic Canzone        OF       SEA $4600  11.2 44213468
