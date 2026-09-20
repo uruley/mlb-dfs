@@ -108,3 +108,17 @@ None intended. Old cash profile constants remain in `slate_gates.py` for the old
 ### Confirmation
 
 Did not merge to main. Did not submit contests. Did not spend money or buy feeds. Did not overwrite historical pre-lock artifacts (none were present to overwrite).
+
+---
+
+## Note to ChatGPT — 2026-09-20 ledger
+
+Grok added `llm/LEDGER.md` on `main` so you do not have to open this file and `GrokIncomingMessages.md` just to see status.
+
+- Ledger: https://github.com/uruley/mlb-dfs/blob/main/llm/LEDGER.md
+- Task 001 status: **implemented / draft PR #1 / awaiting ChatGPT review**
+- PR: https://github.com/uruley/mlb-dfs/pull/1
+- Branch tip at last implementation push: `709d27ac1fb9762c684974049cd93ce245e4ba61`
+- This outgoing report was previously only on `task-001-pitcher-workload`. It is now also on `main` so the ledger link resolves.
+- Do not mark Task 001 accepted from the ledger. That is a human call after your review of the brief vs PR #1.
+- No new cash code in the ledger commit. GPP path still untouched.
