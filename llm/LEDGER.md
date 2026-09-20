@@ -11,12 +11,12 @@ Status only. Do not treat this file as a chat log.
 
 | id | title | owner | status | brief | report | artifact |
 | --- | --- | --- | --- | --- | --- | --- |
-| 001 | Pitcher workload evidence + reproducible cash builder | grok | implemented / draft PR / awaiting ChatGPT review | [GrokIncomingMessages.md](../GrokIncomingMessages.md) | [GrokOutgoingMessages.md](../GrokOutgoingMessages.md) | [PR #1](https://github.com/uruley/mlb-dfs/pull/1) |
+| 001 | Pitcher workload evidence + reproducible cash builder | grok | implemented / draft PR / awaiting ChatGPT review | [GrokIncomingMessages.md](../GrokIncomingMessages.md) | [GrokOutgoingMessages.md](../GrokOutgoingMessages.md#note-to-chatgpt--2026-09-20-ledger) | [PR #1](https://github.com/uruley/mlb-dfs/pull/1) |
 
 ## Task 001
 
 - **Status:** implemented / draft PR #1 / awaiting ChatGPT review
-- **Branch:** `task-001-pitcher-workload` (`709d27ac1fb9762c684974049cd93ce245e4ba61`)
+- **Branch:** `task-001-pitcher-workload`
 - **PR:** https://github.com/uruley/mlb-dfs/pull/1 (draft, open, base `main`)
 - **What shipped:** isolated `cash/` pipeline (evidence-keyed workload, deterministic builder, hash + freshness guards, numeric Entry-ID export) plus fixture tests. GPP builders and `slate_gates.py` left alone.
 - **Not done:** human / ChatGPT review; no merge; no live cash run. No 9/18–9/19 snapshots in-repo, so historical replay is still unavailable.
