@@ -266,6 +266,9 @@ export interface SimArm {
   rates: Rates;
   hand: Hand;
   targetBf: number;
+  role: "starter" | "opener" | "bulk" | "short";
+  ipPerStart: number | null;
+  workloadSource: string;
 }
 
 export interface SimGame {
@@ -613,6 +616,9 @@ export interface PoolPlayer {
   std: number;
   samples: Float32Array;
   pricedFrom: "model" | "draftkings";
+  role: "starter" | "opener" | "bulk" | "short" | "bat";
+  ipPerStart: number | null;
+  workloadSource: string;
 }
 
 export function moments(samples: Float32Array) {
@@ -722,9 +728,21 @@ export function solveLineup(
   lambda: number,
   maxOrder: number,
   cap = 50000,
+  lockedIds: number[] = [],
+  excludedIds: number[] = [],
 ): SolveResult {
-  const arms = pool.filter((p) => p.isPitcher);
-  const hitters = pool.filter((p) => !p.isPitcher && p.order >= 1 && p.order <= maxOrder);
+  const locked = new Set(lockedIds);
+  const banned = new Set(excludedIds);
+  const active = pool.filter((p) => locked.has(p.id) || !banned.has(p.id));
+  const arms = active.filter((p) => p.isPitcher);
+  const hitters = active.filter(
+    (p) => !p.isPitcher && (locked.has(p.id) || (p.order >= 1 && p.order <= maxOrder)),
+  );
+  const lockedArms = arms.filter((p) => locked.has(p.id));
+  const lockedHitters = hitters.filter((p) => locked.has(p.id));
+  if (lockedArms.length > 2) {
+    return { lineup: null, note: "More than two pitchers are locked." };
+  }
   const slotList: Slot[] = ["C", "1B", "2B", "3B", "SS", "OF"];
   for (const slot of slotList) {
     const have = hitters.filter((h) => h.slots.includes(slot));
@@ -748,12 +766,15 @@ export function solveLineup(
         .sort((a, b) => floorOf(b.mean, b.std, lambda) - floorOf(a.mean, a.std, lambda)),
     );
   }
+  const mustArms = new Set(lockedArms.map((p) => p.id));
   const pairs: { a: PoolPlayer; b: PoolPlayer; score: number; salary: number }[] = [];
   for (let i = 0; i < arms.length; i++) {
     for (let j = i + 1; j < arms.length; j++) {
       if (arms[i].gameId === arms[j].gameId) continue;
+      if (mustArms.size === 2 && !(mustArms.has(arms[i].id) && mustArms.has(arms[j].id))) continue;
+      if (mustArms.size === 1 && !mustArms.has(arms[i].id) && !mustArms.has(arms[j].id)) continue;
       const salary = arms[i].salary + arms[j].salary;
-      if (salary > cap - 16000) continue;
+      if (mustArms.size === 0 && salary > cap - 16000) continue;
       pairs.push({
         a: arms[i],
         b: arms[j],
@@ -772,8 +793,23 @@ export function solveLineup(
     const used = new Set<number>([pair.a.id, pair.b.id]);
     const teams: Record<string, number> = {};
     let salary = pair.salary;
+    const reserved: (number | null)[] = HITTER_SLOTS.map(() => null);
+    for (const h of lockedHitters) {
+      if (blocked.has(h.team)) return null;
+      const idx = HITTER_SLOTS.findIndex((slot, i) => reserved[i] == null && h.slots.includes(slot));
+      if (idx < 0) return null;
+      reserved[idx] = h.id;
+      used.add(h.id);
+      teams[h.team] = (teams[h.team] ?? 0) + 1;
+      salary += h.salary;
+    }
     const ids: number[] = [];
     for (let s = 0; s < HITTER_SLOTS.length; s++) {
+      const held = reserved[s];
+      if (held != null) {
+        ids.push(held);
+        continue;
+      }
       const slot = HITTER_SLOTS[s];
       const remainSlots = HITTER_SLOTS.length - s - 1;
       const room = cap - salary - remainSlots * 2000;
@@ -857,6 +893,7 @@ export function solveLineup(
     let improved = false;
     for (let s = 0; s < current.length; s++) {
       const slot = current[s].slot;
+      if (locked.has(current[s].player.id)) continue;
       for (const cand of eligible(slot)) {
         if (current.some((a) => a.player.id === cand.id)) continue;
         const next = current.map((a, i) => (i === s ? { slot, player: cand } : a));

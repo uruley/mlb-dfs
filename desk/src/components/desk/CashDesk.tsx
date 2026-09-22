@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   Download,
@@ -20,7 +20,7 @@ import {
   type PoolPlayer,
   type Slot,
 } from "@/lib/desk/engine";
-import { applySalaries, downloadText, parseSalaryFile, scorecardCsv, uploadCsv } from "@/lib/desk/csv";
+import { applySalaries, downloadText, parseSalaryFile, scorecardCsv, uploadCsv, uploadReady, type SalaryRow } from "@/lib/desk/csv";
 import { buildDesk, type DeskData } from "@/lib/desk/run";
 import { mlbDate } from "@/lib/desk/slate";
 
@@ -100,6 +100,20 @@ export function CashDesk() {
   const [sortKey, setSortKey] = useState<SortKey>("floor");
   const [salaryNote, setSalaryNote] = useState("Salaries are modeled from the floor until a DraftKings file is dropped.");
   const [view, setView] = useState<"ticket" | "pool" | "math">("ticket");
+  const [advanced, setAdvanced] = useState(false);
+  const [lockedIds, setLockedIds] = useState<number[]>([]);
+  const [excludedIds, setExcludedIds] = useState<number[]>([]);
+  const [delta, setDelta] = useState("");
+  const [ipDraft, setIpDraft] = useState("5.5");
+  const [sheet, setSheet] = useState<{ name: string; teams: string[]; unmatched: number; matched: number } | null>(null);
+  const salaryFile = useRef<{ name: string; rows: SalaryRow[] } | null>(null);
+  const workloadRef = useRef<Record<number, { ip: number; at: string }>>({});
+  const heldRef = useRef<PoolPlayer[]>([]);
+
+  function noteForSalaries(matched: number, unmatched: number, teams: number, onBoard: number, fileName: string) {
+    if (!matched) return `${fileName} did not match anyone on this board.`;
+    return `${fileName}: ${matched} of ${onBoard} posted players, ${teams} teams, ${unmatched} sheet rows not in a posted lineup. Roster spots come from the sheet.`;
+  }
 
   useEffect(() => {
     let dead = false;
@@ -111,11 +125,19 @@ export function CashDesk() {
         setMessage(msg);
         setPct(next);
       }
-    })
+    }, workloadRef.current)
       .then((desk) => {
         if (dead) return;
+        const saved = salaryFile.current;
+        if (saved) {
+          const applied = applySalaries(desk.players, saved.rows);
+          setSheet({ name: saved.name, teams: applied.slateTeams, unmatched: applied.unmatched, matched: applied.matched });
+          setSalaryNote(noteForSalaries(applied.matched, applied.unmatched, applied.slateTeams.length, desk.players.length, saved.name));
+        } else {
+          setSheet(null);
+          setSalaryNote("Import a DraftKings salary file before downloading a lineup.");
+        }
         setData(desk);
-        setSalaryNote("Salaries are modeled from the floor until a DraftKings file is dropped.");
         setPhase("ready");
         setSelectedId(desk.players.find((p) => !p.isPitcher)?.id ?? null);
       })
@@ -131,10 +153,65 @@ export function CashDesk() {
 
   const solved = useMemo(() => {
     if (!data) return null;
-    return solveLineup(data.players, lambda, maxOrder);
-  }, [data, lambda, maxOrder]);
+    const now = Date.now();
+    const open = new Set(
+      data.slate.games
+        .filter((g) => {
+          if (g.status === "In Progress" || g.status === "Final" || g.status === "Game Over") return false;
+          const start = Date.parse(g.start);
+          return !Number.isFinite(start) || start > now;
+        })
+        .map((g) => g.id),
+    );
+    const teams = new Set(sheet?.teams ?? []);
+    const starts = new Map(data.slate.games.map((g) => [g.id, Date.parse(g.start)]));
+    const autoLocked = heldRef.current
+      .filter((p) => {
+        const start = starts.get(p.gameId);
+        return start != null && Number.isFinite(start) && start <= now;
+      })
+      .map((p) => p.id);
+    const locks = [...new Set([...lockedIds, ...autoLocked])];
+    const pool = data.players.filter((p) => {
+      if (locks.includes(p.id)) return true;
+      if (excludedIds.includes(p.id)) return false;
+      if (!open.has(p.gameId)) return false;
+      if (sheet && p.pricedFrom !== "draftkings") return false;
+      if (teams.size > 0 && !teams.has(p.team)) return false;
+      return true;
+    });
+    const result = solveLineup(pool, lambda, maxOrder, 50000, locks, excludedIds);
+    if (!sheet || !result.lineup) return result;
+    return {
+      ...result,
+      note: `${result.note} · sheet only, games still upcoming`,
+    };
+  }, [data, lambda, maxOrder, sheet, lockedIds, excludedIds]);
 
   const lineupPlayers = useMemo(() => solved?.lineup?.map((a) => a.player) ?? [], [solved]);
+
+  useEffect(() => {
+    if (!solved?.lineup) return;
+    const next = solved.lineup.map((a) => a.player);
+    const prev = heldRef.current;
+    if (prev.length === 10) {
+      const prevMean = prev.reduce((s, p) => s + p.mean, 0);
+      const nextMean = next.reduce((s, p) => s + p.mean, 0);
+      const prevSalary = prev.reduce((s, p) => s + p.salary, 0);
+      const nextSalary = next.reduce((s, p) => s + p.salary, 0);
+      const inn = next.filter((p) => !prev.some((q) => q.id === p.id)).map((p) => p.name);
+      const out = prev.filter((p) => !next.some((q) => q.id === p.id)).map((p) => p.name);
+      if (!inn.length && !out.length) setDelta("Refresh kept the same ten.");
+      else {
+        const salaryDelta = nextSalary - prevSalary;
+        const meanDelta = nextMean - prevMean;
+        setDelta(
+          `In ${inn.join(", ") || "nobody"}. Out ${out.join(", ") || "nobody"}. Salary ${salaryDelta >= 0 ? "+" : ""}${money(salaryDelta)}, projected mean ${meanDelta >= 0 ? "+" : ""}${meanDelta.toFixed(1)}.`,
+        );
+      }
+    }
+    heldRef.current = next;
+  }, [solved]);
 
   const dist = useMemo(() => (lineupPlayers.length === 10 ? distribution(lineupPlayers) : null), [lineupPlayers]);
 
@@ -169,21 +246,22 @@ export function CashDesk() {
     : 0;
 
   function onSalaryFile(file: File) {
+    if (!data) {
+      setSalaryNote("The board is still loading. Drop the salary file again once the ticket is up.");
+      return;
+    }
     file.text().then((text) => {
-      if (!data) return;
       const parsed = parseSalaryFile(text);
       if (!parsed.length) {
-        setSalaryNote("That file didn't look like a DraftKings salary sheet.");
+        setSalaryNote(`${file.name} has no Name and Salary columns. Use the DraftKings player list, not a filled lineup.`);
         return;
       }
       const next = data.players.map((p) => ({ ...p }));
-      const matched = applySalaries(next, parsed);
+      salaryFile.current = { name: file.name, rows: parsed };
+      const applied = applySalaries(next, parsed);
+      setSheet({ name: file.name, teams: applied.slateTeams, unmatched: applied.unmatched, matched: applied.matched });
       setData({ ...data, players: next });
-      setSalaryNote(
-        matched
-          ? `Matched ${matched} salaries from ${file.name}. The upload file will use DraftKings ids.`
-          : "No names matched. Check that the sheet is the classic salary export.",
-      );
+      setSalaryNote(noteForSalaries(applied.matched, applied.unmatched, applied.slateTeams.length, next.length, file.name));
     });
   }
 
@@ -194,8 +272,7 @@ export function CashDesk() {
           <p className="text-xs font-medium tracking-widest text-gold uppercase">MLB classic cash</p>
           <h1 className="font-display mt-1 text-5xl leading-none text-chalk sm:text-6xl">Cash Desk</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-mist">
-            Floor-weighted DraftKings lineups. Log5 matchups, a 24-state half-inning chain, ten thousand
-            sims a game, then the cash constraints.
+            Import the DraftKings salary file, check the warnings, then download the lineup file for that same start time.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -215,7 +292,7 @@ export function CashDesk() {
             <div className="h-full bg-gold" style={{ width: `${Math.round(pct * 100)}%` }} />
           </div>
           <ol className="mt-6 grid gap-2 text-sm text-mist sm:grid-cols-3">
-            {["Board & lineups", "Log5 + Markov", "10k sims", "Floor solve", "Cap & fades", "Upload CSV"].map(
+            {["Board and lineups", "Matchups", "10k sims", "Suggested lineup", "Cap and fades", "Download lineup"].map(
               (step, i) => (
                 <li key={step} className="rounded-xl border border-line bg-ink px-3 py-3">
                   <span className="tabular-nums text-gold">0{i + 1}</span>
@@ -287,37 +364,56 @@ export function CashDesk() {
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-3">
-            <label className="rounded-2xl border border-line bg-field px-4 py-3 text-sm">
-              <span className="block text-mist">Risk penalty · {lambda.toFixed(2)} × stdev</span>
-              <input
-                className="mt-3 w-full"
-                type="range"
-                min={0}
-                max={1.5}
-                step={0.05}
-                value={lambda}
-                onChange={(e) => setLambda(Number(e.target.value))}
-              />
-            </label>
-            <label className="rounded-2xl border border-line bg-field px-4 py-3 text-sm">
-              <span className="block text-mist">Batting-order cut · 1 through {maxOrder}</span>
-              <input
-                className="mt-3 w-full"
-                type="range"
-                min={5}
-                max={9}
-                step={1}
-                value={maxOrder}
-                onChange={(e) => setMaxOrder(Number(e.target.value))}
-              />
-            </label>
-            <div className="rounded-2xl border border-line bg-field px-4 py-3 text-sm">
-              <span className="block text-mist">
-                {confirmed}/{data.slate.games.length} lineups posted · {data.sims.toLocaleString("en-US")} sims
-              </span>
-              <p className="mt-2 text-chalk">{salaryNote}</p>
+          <details
+            className="rounded-2xl border border-line bg-field px-4 py-3"
+            open={advanced}
+            onToggle={(e) => setAdvanced((e.target as HTMLDetailsElement).open)}
+          >
+            <summary className="cursor-pointer text-sm text-chalk">Advanced · risk and batting-order cut</summary>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-sm">
+                <span className="block text-mist">Risk penalty · {lambda.toFixed(2)} × stdev. 0.50 is the cash default. 0 chases points.</span>
+                <input
+                  className="mt-3 w-full"
+                  type="range"
+                  min={0}
+                  max={1.5}
+                  step={0.05}
+                  value={lambda}
+                  onChange={(e) => setLambda(Number(e.target.value))}
+                />
+              </label>
+              <label className="text-sm">
+                <span className="block text-mist">Batting-order cut · 1 through {maxOrder}. 5 keeps the top of the order.</span>
+                <input
+                  className="mt-3 w-full"
+                  type="range"
+                  min={5}
+                  max={9}
+                  step={1}
+                  value={maxOrder}
+                  onChange={(e) => setMaxOrder(Number(e.target.value))}
+                />
+              </label>
             </div>
+            <button
+              type="button"
+              className="mt-3 min-h-11 text-sm text-gold"
+              onClick={() => {
+                setLambda(0.5);
+                setMaxOrder(5);
+              }}
+            >
+              Reset to cash defaults
+            </button>
+          </details>
+
+          <section className="rounded-2xl border border-line bg-field px-4 py-3 text-sm">
+            <p className="text-mist">
+              {sheet ? sheet.name : "No salary file"} · refreshed {new Date(data.slate.checkedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })} · {confirmed}/{data.slate.games.length} lineups posted
+            </p>
+            <p className="mt-2 text-chalk">{salaryNote}</p>
+            {delta ? <p className="mt-2 text-mist">{delta}</p> : null}
           </section>
 
           {view === "ticket" ? (
@@ -325,19 +421,19 @@ export function CashDesk() {
               <article className="rounded-2xl bg-chalk p-5 text-ink sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-3 border-b border-ink/15 pb-4">
                   <div>
-                    <p className="text-xs tracking-widest text-ink/60 uppercase">Optimal cash ticket</p>
+                    <p className="text-xs tracking-widest text-ink/60 uppercase">Suggested lineup</p>
                     <h2 className="font-display text-4xl leading-none">
                       {dist ? pts(dist.mean) : solved.lineup ? pts(objective) : "No ticket"}
                     </h2>
                     <p className="mt-1 text-sm text-ink/70">
                       {dist
-                        ? `Projected mean · floor ${pts(objective)} · p10 ${pts(dist.p10)}`
+                        ? `Projected mean · floor ${pts(objective)} · lower outcome, 10th percentile ${pts(dist.p10)}`
                         : `Objective is mean minus ${lambda.toFixed(2)} × stdev`}
                     </p>
                   </div>
                     <div className="text-right text-sm tabular-nums">
                       <div>{solved.lineup ? money(salary) : "—"} / $50,000</div>
-                      <div className="text-ink/70">{dist ? `Median ${pts(dist.p50)} · p90 ${pts(dist.p90)}` : solved.note}</div>
+                      <div className="text-ink/70">{dist ? `Median ${pts(dist.p50)} · upper outcome, 90th percentile ${pts(dist.p90)}` : solved.note}</div>
                     </div>
                 </div>
                 {solved.lineup ? (
@@ -357,7 +453,10 @@ export function CashDesk() {
                             <span className="block truncate font-medium">{a.player.name}</span>
                             <span className="text-xs text-ink/60">
                               {a.player.team} vs {a.player.opp}
-                              {a.player.isPitcher ? "" : ` · ${ordinal(a.player.order)}`}
+                              {a.player.isPitcher
+                                ? ` · ${a.player.role}${a.player.ipPerStart != null ? ` · ${a.player.ipPerStart.toFixed(1)} IP` : ""}`
+                                : ` · ${ordinal(a.player.order)}`}
+                              {lockedIds.includes(a.player.id) ? " · locked" : ""}
                             </span>
                           </span>
                           <span className="text-right text-sm tabular-nums">
@@ -367,6 +466,26 @@ export function CashDesk() {
                             </span>
                           </span>
                         </button>
+                        <div className="flex gap-2 pb-3 pl-11">
+                          <button
+                            type="button"
+                            className="min-h-11 text-xs text-ink/70"
+                            onClick={() =>
+                              setLockedIds((ids) =>
+                                ids.includes(a.player.id) ? ids.filter((id) => id !== a.player.id) : [...ids, a.player.id],
+                              )
+                            }
+                          >
+                            {lockedIds.includes(a.player.id) ? "Unlock" : "Lock"}
+                          </button>
+                          <button
+                            type="button"
+                            className="min-h-11 text-xs text-ink/70"
+                            onClick={() => setExcludedIds((ids) => [...ids, a.player.id])}
+                          >
+                            Exclude
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ol>
@@ -378,10 +497,25 @@ export function CashDesk() {
                     type="button"
                     disabled={!solved.lineup}
                     className="inline-flex min-h-11 items-center gap-2 rounded-full bg-ink px-4 text-sm font-medium text-chalk disabled:opacity-40"
-                    onClick={() => solved.lineup && downloadText("optimal_upload.csv", uploadCsv(solved.lineup))}
+                    onClick={() => {
+                      if (!solved.lineup) return;
+                      if (!uploadReady(solved.lineup)) {
+                        const problems = solved.lineup.flatMap((a) => {
+                          if (a.player.pricedFrom !== "draftkings" || !/^\d{8,}$/.test(a.player.dkId)) {
+                            return [`${a.player.name} is not on the salary sheet`];
+                          }
+                          if (!a.player.slots.includes(a.slot)) return [`${a.player.name} cannot play ${a.slot}`];
+                          return [];
+                        });
+                        setSalaryNote(problems.join(". ") || "Import the salary file before downloading a lineup.");
+                        return;
+                      }
+                      downloadText("optimal_upload.csv", uploadCsv(solved.lineup));
+                      setSalaryNote("Downloaded optimal_upload.csv. On DraftKings, pick the same start time as the salary file, then drop this file. Do not reuse the old one.");
+                    }}
                   >
                     <Download className="size-4" aria-hidden="true" />
-                    Upload CSV
+                    Download DraftKings lineup
                   </button>
                   <button
                     type="button"
@@ -407,6 +541,41 @@ export function CashDesk() {
                   </label>
                 </div>
                 {solved.lineup ? <p className="mt-3 text-xs leading-5 text-ink/60">{solved.note}</p> : null}
+                <p className="mt-3 text-sm leading-5 text-ink" role="status">
+                  {salaryNote}
+                </p>
+                {selected?.isPitcher ? (
+                  <form
+                    className="mt-4 flex flex-wrap items-end gap-2 border-t border-ink/10 pt-4"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const ip = Number(ipDraft);
+                      if (!Number.isFinite(ip) || ip < 0.3 || ip > 9) {
+                        setSalaryNote("Expected innings need to be between 0.3 and 9.");
+                        return;
+                      }
+                      workloadRef.current = {
+                        ...workloadRef.current,
+                        [selected.id]: { ip, at: new Date().toLocaleString("en-US", { hour: "numeric", minute: "2-digit" }) },
+                      };
+                      setNonce((n) => n + 1);
+                    }}
+                  >
+                    <label className="text-sm">
+                      <span className="block text-ink/70">Expected innings · {selected.name}</span>
+                      <input
+                        value={ipDraft}
+                        onChange={(e) => setIpDraft(e.target.value)}
+                        inputMode="decimal"
+                        className="mt-1 min-h-11 w-24 rounded-xl border border-ink/20 px-3"
+                      />
+                    </label>
+                    <button type="submit" className="min-h-11 rounded-full bg-ink px-4 text-sm text-chalk">
+                      Rerun with this workload
+                    </button>
+                    <p className="w-full text-xs leading-5 text-ink/60">{selected.workloadSource}</p>
+                  </form>
+                ) : null}
               </article>
 
               <div className="flex flex-col gap-4">
@@ -447,7 +616,7 @@ export function CashDesk() {
                   {dist ? (
                     <dl className="mt-2 grid grid-cols-3 gap-2 text-center text-sm tabular-nums">
                       <div className="rounded-xl bg-ink px-2 py-2">
-                        <dt className="text-xs text-mist">p10</dt>
+                        <dt className="text-xs text-mist">Lower 10th</dt>
                         <dd>{pts(dist.p10)}</dd>
                       </div>
                       <div className="rounded-xl bg-ink px-2 py-2">
@@ -455,7 +624,7 @@ export function CashDesk() {
                         <dd>{pts(dist.p50)}</dd>
                       </div>
                       <div className="rounded-xl bg-ink px-2 py-2">
-                        <dt className="text-xs text-mist">p90</dt>
+                        <dt className="text-xs text-mist">Upper 90th</dt>
                         <dd>{pts(dist.p90)}</dd>
                       </div>
                     </dl>
@@ -549,11 +718,13 @@ export function CashDesk() {
           ) : null}
 
           <section className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {data.slate.games.map((g) => (
-              <article key={g.id} className="rounded-2xl border border-line bg-field px-4 py-3">
+            {data.slate.games.map((g) => {
+              const onSheet = !sheet || sheet.teams.includes(g.away) || sheet.teams.includes(g.home);
+              return (
+              <article key={g.id} className={onSheet ? "rounded-2xl border border-line bg-field px-4 py-3" : "rounded-2xl border border-line bg-field px-4 py-3 opacity-40"}>
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="font-medium text-chalk">{g.label}</h3>
-                  <span className="text-xs text-mist">{g.status}</span>
+                  <span className="text-xs text-mist">{onSheet ? g.status : "Not on sheet"}</span>
                 </div>
                 <p className="mt-1 text-xs text-mist">
                   {g.awayArm?.name ?? "TBD"} · {g.homeArm?.name ?? "TBD"}
@@ -563,7 +734,8 @@ export function CashDesk() {
                 </p>
                 {g.weather ? <p className="mt-1 text-xs text-mist">{g.weather}</p> : null}
               </article>
-            ))}
+              );
+            })}
           </section>
         </div>
       ) : null}

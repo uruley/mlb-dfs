@@ -12,11 +12,22 @@ export interface DeskData {
 export async function buildDesk(
   date: string | undefined,
   onProgress: (message: string, pct: number) => void,
+  overrides: Record<number, { ip: number; at: string }> = {},
 ): Promise<DeskData> {
   onProgress("Reading the board", 0.08);
   const slate = await loadSlate(date);
   if (!slate.games.length) {
     throw new Error("No open games on this date. The slate may already be final.");
+  }
+  for (const game of slate.games) {
+    for (const arm of [game.awayArm, game.homeArm]) {
+      const over = arm ? overrides[arm.id] : undefined;
+      if (!arm || !over) continue;
+      arm.ipPerStart = over.ip;
+      arm.targetBf = Math.round(Math.min(32, Math.max(6, over.ip * 4.35)));
+      arm.role = over.ip < 2.2 ? "opener" : over.ip < 4.5 ? "bulk" : "starter";
+      arm.workloadSource = `Manual ${over.ip.toFixed(1)} innings, set ${over.at}.`;
+    }
   }
   onProgress("Running 10,000 half-inning chains", 0.18);
   const samples = await simulateGames(slate.games, slate.league, SIMS, 0x5eed22, (done, total) => {
@@ -45,6 +56,9 @@ export async function buildDesk(
       std,
       samples: row,
       pricedFrom: "model",
+      role: "bat",
+      ipPerStart: null,
+      workloadSource: "",
     });
   };
   const pushArm = (arm: (typeof slate.games)[number]["awayArm"]) => {
@@ -69,6 +83,9 @@ export async function buildDesk(
       std,
       samples: row,
       pricedFrom: "model",
+      role: arm.role,
+      ipPerStart: arm.ipPerStart,
+      workloadSource: arm.workloadSource,
     });
   };
   for (const g of slate.games) {

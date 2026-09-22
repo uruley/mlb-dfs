@@ -11,14 +11,7 @@ import {
 
 const MLB = "https://statsapi.mlb.com/api/v1";
 
-const OPEN = new Set([
-  "Scheduled",
-  "Pre-Game",
-  "Warmup",
-  "Delayed",
-  "Delayed Start",
-  "In Progress",
-]);
+const OPEN = new Set(["Scheduled", "Pre-Game", "Warmup", "Delayed", "Delayed Start", "In Progress"]);
 
 export interface Slate {
   date: string;
@@ -71,10 +64,46 @@ function slotsFor(abbr: string): Slot[] {
     case "OF":
       return ["OF"];
     case "DH":
-      return ["1B", "OF"];
+      return ["OF"];
     default:
       return ["OF"];
   }
+}
+
+interface PitchWorkload {
+  targetBf: number;
+  role: "starter" | "opener" | "bulk" | "short";
+  ipPerStart: number | null;
+  source: string;
+}
+
+function inningsOf(v: unknown) {
+  if (typeof v === "string" && v.includes(".")) {
+    const [whole, frac] = v.split(".");
+    const outs = Number(frac);
+    if (outs === 1 || outs === 2) return Number(whole) + outs / 3;
+  }
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function workloadFrom(stat: Record<string, unknown> | undefined): PitchWorkload {
+  const ip = inningsOf(stat?.inningsPitched);
+  const gs = num(stat?.gamesStarted);
+  const games = num(stat?.gamesPlayed) || gs;
+  const ipPerStart = gs >= 1 ? ip / gs : games > 0 && ip > 0 ? ip / games : null;
+  let role: PitchWorkload["role"] = "starter";
+  if (ipPerStart == null) role = "starter";
+  else if (ipPerStart < 2.2) role = "opener";
+  else if (gs <= 3 && ipPerStart < 4.5) role = "bulk";
+  else if (ipPerStart < 4.5) role = "short";
+  const targetBf =
+    ipPerStart == null ? 22 : Math.round(Math.min(32, Math.max(6, ipPerStart * 4.35)));
+  const source =
+    ipPerStart == null
+      ? "No season innings on file. Using 22 batters faced."
+      : `MLB season, ${ipPerStart.toFixed(1)} innings per start, ${role}.`;
+  return { targetBf, role, ipPerStart, source };
 }
 
 interface Counting {
@@ -107,6 +136,7 @@ function countingOf(stat: Record<string, unknown>, kind: "hit" | "pitch"): Count
 interface PersonStat {
   hitting?: Counting;
   pitching?: Counting;
+  pitchingRaw?: Record<string, unknown>;
   hand: Hand;
   throwHand: Hand;
   pos: string;
@@ -126,7 +156,10 @@ function parsePeople(payload: unknown): Map<number, PersonStat> {
       const s = g.splits?.[0]?.stat;
       if (!s) continue;
       if (name === "hitting") stat.hitting = countingOf(s, "hit");
-      if (name === "pitching") stat.pitching = countingOf(s, "pitch");
+      if (name === "pitching") {
+        stat.pitching = countingOf(s, "pitch");
+        stat.pitchingRaw = s;
+      }
     }
     out.set(id, stat);
   }
@@ -216,7 +249,8 @@ export async function loadSlate(date = mlbDate()): Promise<Slate> {
       const hitters: SimHitter[] = [];
       list.forEach((row, index) => {
         const person = people.get(row.id);
-        const abbr = row.primaryPosition?.abbreviation || person?.pos || "OF";
+        const gamePos = row.primaryPosition?.abbreviation || "";
+        const abbr = gamePos && gamePos !== "DH" ? gamePos : person?.pos || "OF";
         if (abbr === "P") return;
         const counting = person?.hitting;
         const raw = counting ? ratesFromCounting(counting) : ratesFromCounting({ pa: 0, k: 0, bb: 0, hbp: 0, h: 0, d: 0, t: 0, hr: 0 });
@@ -251,7 +285,8 @@ export async function loadSlate(date = mlbDate()): Promise<Slate> {
         : ratesFromCounting({ pa: 0, k: 0, bb: 0, hbp: 0, h: 0, d: 0, t: 0, hr: 0 });
       if (pa > 0) raw.sample = pa;
       const rates = regress(raw, league, 180);
-      const targetBf = Math.round(Math.min(32, Math.max(18, 22 + (rates.k - rates.bb) * 36 - rates.hr * 20)));
+      const workload = workloadFrom(person?.pitchingRaw);
+      const targetBf = workload.targetBf;
       return {
         id: probable.id,
         name: probable.fullName,
@@ -261,6 +296,9 @@ export async function loadSlate(date = mlbDate()): Promise<Slate> {
         rates,
         hand: person?.throwHand ?? "R",
         targetBf,
+        role: workload.role,
+        ipPerStart: workload.ipPerStart,
+        workloadSource: workload.source,
       };
     };
     return {
