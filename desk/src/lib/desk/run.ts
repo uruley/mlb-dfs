@@ -1,5 +1,5 @@
-import { anchorToVegas, moments, pricePlayers, simulateGames, type PoolPlayer } from "@/lib/desk/engine";
-import { loadSlate, type Slate } from "@/lib/desk/slate";
+import { FULL_MODEL, anchorToVegas, moments, pricePlayers, simulateGames, type ModelOptions, type PoolPlayer } from "@/lib/desk/engine";
+import { loadSlate, pitchLimitFrom, type Slate } from "@/lib/desk/slate";
 
 export const SIMS = 10000;
 
@@ -14,9 +14,11 @@ export async function buildDesk(
   onProgress: (message: string, pct: number) => void,
   overrides: Record<number, { ip: number; at: string }> = {},
   anchor = true,
+  opts: { model?: ModelOptions; includeFinal?: boolean; sims?: number } = {},
 ): Promise<DeskData> {
   onProgress("Reading the board", 0.08);
-  const slate = await loadSlate(date);
+  const model = opts.model ?? FULL_MODEL;
+  const slate = await loadSlate(date, { model, includeFinal: opts.includeFinal });
   if (!slate.games.length) {
     throw new Error("No open games on this date. The slate may already be final.");
   }
@@ -28,9 +30,12 @@ export async function buildDesk(
       arm.targetBf = Math.round(Math.min(32, Math.max(6, over.ip * 4.35)));
       arm.role = over.ip < 2.2 ? "opener" : over.ip < 4.5 ? "bulk" : "starter";
       arm.workloadSource = `Manual ${over.ip.toFixed(1)} innings, set ${over.at}.`;
+      const hook = pitchLimitFrom([], over.ip);
+      arm.pitchLimit = hook.limit;
+      arm.pitchSd = hook.sd;
     }
   }
-  if (anchor) {
+  if (anchor && model.vegas) {
     onProgress("Anchoring team runs to Vegas totals", 0.14);
     await new Promise((resolve) => setTimeout(resolve, 0));
     anchorToVegas(slate.games, slate.league);
@@ -41,7 +46,8 @@ export async function buildDesk(
     }
   }
   onProgress("Running 10,000 half-inning chains", 0.18);
-  const samples = await simulateGames(slate.games, slate.league, SIMS, 0x5eed22, (done, total) => {
+  const sims = opts.sims ?? SIMS;
+  const samples = await simulateGames(slate.games, slate.league, sims, 0x5eed22, (done, total) => {
     onProgress(`Simulating ${done} of ${total} games`, 0.18 + (done / total) * 0.7);
   });
   onProgress("Pricing the floor", 0.92);
@@ -107,5 +113,5 @@ export async function buildDesk(
   }
   pricePlayers(players);
   onProgress("Solving the cash roster", 0.98);
-  return { slate, players, sims: SIMS };
+  return { slate, players, sims };
 }
