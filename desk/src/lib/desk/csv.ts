@@ -1,4 +1,4 @@
-import type { Assignment, PoolPlayer, Slot } from "@/lib/desk/engine";
+import type { Assignment, PoolPlayer, SimGame, Slot } from "@/lib/desk/engine";
 
 export function uploadCsv(lineup: Assignment[]) {
   const ids = lineup.map((a) => a.player.dkId);
@@ -18,11 +18,54 @@ export function uploadReady(lineup: Assignment[]) {
   );
 }
 
-export function scorecardCsv(lineup: Assignment[]) {
+export function uploadBlockers(lineup: Assignment[], games: SimGame[], now: number, entryIds: number[]) {
+  const problems: string[] = [];
+  if (lineup.length !== 10) problems.push("Lineup is not 10 players");
+  for (const a of lineup) {
+    if (a.player.pricedFrom !== "draftkings" || !/^\d{8,}$/.test(a.player.dkId)) {
+      problems.push(`${a.player.name} is missing a DraftKings salary-file ID`);
+    } else if (a.player.salary < 1500) {
+      problems.push(`${a.player.name} is below the $1,500 floor`);
+    } else if (!a.player.slots.includes(a.slot)) {
+      problems.push(`${a.player.name} is not eligible at ${a.slot}`);
+    }
+  }
+  const byId = new Map(games.map((g) => [g.id, g]));
+  const live = (g: SimGame | undefined) => {
+    if (!g) return false;
+    if (g.status === "In Progress" || g.status === "Game Over" || g.status === "Final") return true;
+    const start = Date.parse(g.start);
+    return Number.isFinite(start) && start <= now;
+  };
+  const livePlayers = lineup.filter((a) => live(byId.get(a.player.gameId)));
+  if (!entryIds.length && livePlayers.length) {
+    problems.push("A game in this card has already started. Mark your submitted entry before a late swap");
+  }
+  if (entryIds.length) {
+    const kept = new Set(lineup.map((a) => a.player.id));
+    const startedMissing = entryIds.filter((id) => {
+      if (kept.has(id)) return false;
+      const g = games.find(
+        (game) =>
+          game.awayHitters.some((h) => h.id === id) ||
+          game.homeHitters.some((h) => h.id === id) ||
+          game.awayArm?.id === id ||
+          game.homeArm?.id === id,
+      );
+      return live(g);
+    });
+    if (startedMissing.length) {
+      problems.push("Late swap dropped a player whose game has already started");
+    }
+  }
+  return [...new Set(problems)];
+}
+
+export function scorecardCsv(lineup: Assignment[], lambda = 0.5) {
   const header = "Slot,Name,Team,Opp,Order,Salary,Mean,StdDev,Floor,Id";
   const rows = lineup.map((a) => {
     const p = a.player;
-    const floor = (p.mean - 0.5 * p.std).toFixed(2);
+    const floor = (p.mean - lambda * p.std).toFixed(2);
     return [
       a.slot,
       `"${p.name.replaceAll('"', "")}"`,
@@ -56,6 +99,7 @@ export interface SalaryRow {
   id: string;
   slots: Slot[];
   gameTeams: string[];
+  date: string;
 }
 
 function splitCsv(line: string) {
@@ -122,13 +166,15 @@ export function parseSalaryFile(text: string): SalaryRow[] {
     const raw = cols[useName] ?? "";
     const roster = rosterI >= 0 ? slotsFromRoster(cols[rosterI] ?? "") : [];
     const fallback = posI >= 0 ? slotsFromRoster(cols[posI] ?? "") : [];
+    const info = gameI >= 0 ? cols[gameI] ?? "" : "";
     rows.push({
       nameKey: normName(raw.replace(/\s+\(\d+\)\s*$/, "")),
       team: aliasTeam(cols[teamI] ?? ""),
       salary: Math.round(salary),
       id: idI >= 0 ? cols[idI] ?? "" : "",
       slots: roster.length ? roster : fallback,
-      gameTeams: gameTeams(gameI >= 0 ? cols[gameI] ?? "" : ""),
+      gameTeams: gameTeams(info),
+      date: fileDateFromInfo(info),
     });
   }
   return rows;
@@ -159,10 +205,26 @@ function gameTeams(info: string) {
   return [aliasTeam(match[1]), aliasTeam(match[2])];
 }
 
+function fileDateFromInfo(info: string) {
+  const match = info.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (!match) return "";
+  return `${match[3]}-${match[1].padStart(2, "0")}-${match[2].padStart(2, "0")}`;
+}
+
+export function fileDates(rows: SalaryRow[]) {
+  return [...new Set(rows.map((row) => row.date).filter(Boolean))].sort();
+}
+
+export function gameKey(away: string, home: string, date: string) {
+  return `${aliasTeam(away)}@${aliasTeam(home)}|${date}`;
+}
+
 export interface ApplyResult {
   matched: number;
   slateTeams: string[];
   unmatched: number;
+  gameKeys: string[];
+  dates: string[];
 }
 
 export function applySalaries(players: PoolPlayer[], rows: SalaryRow[]): ApplyResult {
@@ -188,5 +250,12 @@ export function applySalaries(players: PoolPlayer[], rows: SalaryRow[]): ApplyRe
     matched += 1;
   }
   const slateTeams = [...new Set(rows.flatMap((row) => (row.gameTeams.length ? row.gameTeams : row.team ? [row.team] : [])))];
-  return { matched, slateTeams, unmatched: rows.length - used.size };
+  const gameKeys = [
+    ...new Set(
+      rows
+        .map((row) => (row.gameTeams.length >= 2 && row.date ? gameKey(row.gameTeams[0], row.gameTeams[1], row.date) : ""))
+        .filter(Boolean),
+    ),
+  ];
+  return { matched, slateTeams, unmatched: rows.length - used.size, gameKeys, dates: fileDates(rows) };
 }
