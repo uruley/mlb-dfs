@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 5173"
+    "preview": "vite preview --host 127.0.0.1 --port 5173",
+    "typecheck": "tsc --noEmit",
+    "desk:backtest": "npx --yes esbuild@0.28.2 src/lib/desk/backtest.ts --bundle --platform=node --format=esm --alias:@=./src --outfile=node_modules/.cache/desk-backtest.mjs --log-level=error && node node_modules/.cache/desk-backtest.mjs",
+    "test": "node --experimental-strip-types --test src/lib/desk/desk.test.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
