@@ -16,7 +16,9 @@ import {
   log5,
   matchupDist,
   runExpectancy,
+  solveCash,
   solveLineup,
+  type CashSolveResult,
   type PoolPlayer,
   type Slot,
 } from "@/lib/desk/engine";
@@ -35,6 +37,25 @@ const RATE_ROWS = [
   ["s2", "Double"],
   ["hbp", "Hit by pitch"],
 ] as const;
+
+/** Placeholder until cash lines are logged from real multiplier contests. */
+const DEFAULT_CASH_LINE = 110;
+
+function readPref(key: string) {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writePref(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    /* storage blocked: keep in-memory value */
+  }
+}
 
 function money(n: number) {
   return `$${Math.round(n).toLocaleString("en-US")}`;
@@ -94,6 +115,15 @@ export function CashDesk() {
   const [date, setDate] = useState(mlbDate());
   const [nonce, setNonce] = useState(0);
   const [lambda, setLambda] = useState(0.5);
+  const [mode, setMode] = useState<"cash" | "floor">(() => (readPref("desk.mode") === "floor" ? "floor" : "cash"));
+  const [cashLine, setCashLine] = useState<number>(() => {
+    const v = Number(readPref("desk.cashLine"));
+    return Number.isFinite(v) && v > 0 ? v : DEFAULT_CASH_LINE;
+  });
+  const [anchor, setAnchor] = useState(() => readPref("desk.anchor") !== "off");
+  useEffect(() => writePref("desk.mode", mode), [mode]);
+  useEffect(() => writePref("desk.cashLine", String(cashLine)), [cashLine]);
+  useEffect(() => writePref("desk.anchor", anchor ? "on" : "off"), [anchor]);
   const [maxOrder, setMaxOrder] = useState(5);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [query, setQuery] = useState("");
@@ -125,7 +155,7 @@ export function CashDesk() {
         setMessage(msg);
         setPct(next);
       }
-    }, workloadRef.current)
+    }, workloadRef.current, anchor)
       .then((desk) => {
         if (dead) return;
         const saved = salaryFile.current;
@@ -149,9 +179,9 @@ export function CashDesk() {
     return () => {
       dead = true;
     };
-  }, [date, nonce]);
+  }, [date, nonce, anchor]);
 
-  const solved = useMemo(() => {
+  const solved = useMemo((): (CashSolveResult | (ReturnType<typeof solveLineup> & { cashRate?: null })) | null => {
     if (!data) return null;
     const now = Date.now();
     const open = new Set(
@@ -180,13 +210,16 @@ export function CashDesk() {
       if (teams.size > 0 && !teams.has(p.team)) return false;
       return true;
     });
-    const result = solveLineup(pool, lambda, maxOrder, 50000, locks, excludedIds);
+    const result =
+      mode === "cash"
+        ? solveCash(pool, cashLine, maxOrder, 50000, locks, excludedIds)
+        : solveLineup(pool, lambda, maxOrder, 50000, locks, excludedIds);
     if (!sheet || !result.lineup) return result;
     return {
       ...result,
       note: `${result.note} · sheet only, games still upcoming`,
     };
-  }, [data, lambda, maxOrder, sheet, lockedIds, excludedIds]);
+  }, [data, lambda, maxOrder, sheet, lockedIds, excludedIds, mode, cashLine]);
 
   const lineupPlayers = useMemo(() => solved?.lineup?.map((a) => a.player) ?? [], [solved]);
 
@@ -369,10 +402,45 @@ export function CashDesk() {
             open={advanced}
             onToggle={(e) => setAdvanced((e.target as HTMLDetailsElement).open)}
           >
-            <summary className="cursor-pointer text-sm text-chalk">Advanced · risk and batting-order cut</summary>
+            <summary className="cursor-pointer text-sm text-chalk">Advanced · objective, cash line, Vegas anchor, batting-order cut</summary>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="text-sm">
+                <span className="block text-mist">Objective</span>
+                <div className="mt-2 flex gap-2">
+                  {(["cash", "floor"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      aria-pressed={mode === m}
+                      className={`min-h-11 rounded-full border px-4 ${mode === m ? "border-gold text-gold" : "border-line text-mist"}`}
+                      onClick={() => setMode(m)}
+                    >
+                      {m === "cash" ? "Cash rate (sims)" : "Mean − λ × stdev"}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <label className="text-sm">
-                <span className="block text-mist">Risk penalty · {lambda.toFixed(2)} × stdev. 0.50 is the cash default. 0 chases points.</span>
+                <span className="block text-mist">Cash line · points needed to cash. Set it from your recent multiplier results.</span>
+                <input
+                  className="mt-2 min-h-11 w-full rounded-lg border border-line bg-transparent px-3 tabular-nums"
+                  type="number"
+                  min={40}
+                  max={250}
+                  step={0.5}
+                  value={cashLine}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    if (Number.isFinite(v) && v > 0) setCashLine(v);
+                  }}
+                />
+              </label>
+              <label className="flex items-start gap-3 text-sm">
+                <input className="mt-1 size-4" type="checkbox" checked={anchor} onChange={(e) => setAnchor(e.target.checked)} />
+                <span className="text-mist">Anchor team runs to Vegas implied totals (DraftKings lines via ESPN). Reruns the board.</span>
+              </label>
+              <label className="text-sm">
+                <span className="block text-mist">Risk penalty · {lambda.toFixed(2)} × stdev. Used by the Mean − λ × stdev objective only.</span>
                 <input
                   className="mt-3 w-full"
                   type="range"
@@ -402,6 +470,9 @@ export function CashDesk() {
               onClick={() => {
                 setLambda(0.5);
                 setMaxOrder(5);
+                setMode("cash");
+                setCashLine(DEFAULT_CASH_LINE);
+                setAnchor(true);
               }}
             >
               Reset to cash defaults
@@ -427,8 +498,12 @@ export function CashDesk() {
                     </h2>
                     <p className="mt-1 text-sm text-ink/70">
                       {dist
-                        ? `Projected mean · floor ${pts(objective)} · lower outcome, 10th percentile ${pts(dist.p10)}`
-                        : `Objective is mean minus ${lambda.toFixed(2)} × stdev`}
+                        ? mode === "cash" && solved.cashRate != null
+                          ? `Projected mean · clears ${pts(cashLine)} in ${(solved.cashRate * 100).toFixed(1)}% of sims · 10th percentile ${pts(dist.p10)}`
+                          : `Projected mean · floor ${pts(objective)} · lower outcome, 10th percentile ${pts(dist.p10)}`
+                        : mode === "cash"
+                          ? `Objective is the share of sims clearing ${pts(cashLine)}`
+                          : `Objective is mean minus ${lambda.toFixed(2)} × stdev`}
                     </p>
                   </div>
                     <div className="text-right text-sm tabular-nums">
@@ -732,6 +807,19 @@ export function CashDesk() {
                 <p className="mt-2 text-xs tabular-nums text-chalk">
                   Lineups {g.awayOrder >= 9 ? "away posted" : "away waiting"} / {g.homeOrder >= 9 ? "home posted" : "home waiting"}
                 </p>
+                {g.awayImplied != null && g.homeImplied != null ? (
+                  <p className="mt-1 text-xs tabular-nums text-chalk">
+                    Vegas {g.away} {g.awayImplied.toFixed(2)} · {g.home} {g.homeImplied.toFixed(2)}
+                    {g.awaySimRuns != null && g.homeSimRuns != null
+                      ? ` · sim ${g.awaySimRuns.toFixed(2)} / ${g.homeSimRuns.toFixed(2)}`
+                      : ""}
+                    {g.awayMul != null && g.homeMul != null && (g.awayMul !== 1 || g.homeMul !== 1)
+                      ? ` · offense ×${g.awayMul.toFixed(2)} / ×${g.homeMul.toFixed(2)}`
+                      : ""}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-xs text-mist">{g.lineSource ?? "No line posted. Stats model only."}</p>
+                )}
                 {g.weather ? <p className="mt-1 text-xs text-mist">{g.weather}</p> : null}
               </article>
               );

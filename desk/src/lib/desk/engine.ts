@@ -286,6 +286,16 @@ export interface SimGame {
   homeHitters: SimHitter[];
   awayArm: SimArm | null;
   homeArm: SimArm | null;
+  /** Vegas implied runs (from DK total + moneyline). Null when no line is posted. */
+  awayImplied?: number | null;
+  homeImplied?: number | null;
+  /** Offense multiplier on reach-base events after anchoring (1 = unanchored). */
+  awayMul?: number;
+  homeMul?: number;
+  /** Simulated mean runs after anchoring, for display / audit. */
+  awaySimRuns?: number;
+  homeSimRuns?: number;
+  lineSource?: string;
 }
 
 interface ReadyHitter {
@@ -312,7 +322,25 @@ function makeBook(ids: number[], n: number) {
   return { map, book };
 }
 
-function readyHitters(hitters: SimHitter[], arm: SimArm | null, league: Rates): ReadyHitter[] {
+/**
+ * Scale an offense's reach-base events (BB, HBP, 1B, 2B, 3B, HR) by `mul`.
+ * Used to anchor a team's simulated run total to its Vegas implied total, which
+ * folds park, weather, bullpen and lineup quality into one market number.
+ */
+export function scaleOffense(dist: Dist, mul: number): Dist {
+  if (mul === 1) return dist;
+  return pack({
+    k: dist.k,
+    bb: dist.bb * mul,
+    hbp: dist.hbp * mul,
+    s1: dist.s1 * mul,
+    s2: dist.s2 * mul,
+    s3: dist.s3 * mul,
+    hr: dist.hr * mul,
+  });
+}
+
+function readyHitters(hitters: SimHitter[], arm: SimArm | null, league: Rates, mul = 1): ReadyHitter[] {
   const source = hitters.length
     ? hitters
     : Array.from({ length: 9 }, () => ({
@@ -322,9 +350,9 @@ function readyHitters(hitters: SimHitter[], arm: SimArm | null, league: Rates): 
         hand: "R" as Hand,
       }));
   return source.map((h) => {
-    const vsPen = applyPlatoon(matchupDist(h.rates, league, league), h.hand, "R");
+    const vsPen = scaleOffense(applyPlatoon(matchupDist(h.rates, league, league), h.hand, "R"), mul);
     const vsArm = arm
-      ? applyPlatoon(matchupDist(h.rates, arm.rates, league), h.hand, arm.hand)
+      ? scaleOffense(applyPlatoon(matchupDist(h.rates, arm.rates, league), h.hand, arm.hand), mul)
       : vsPen;
     return { id: h.id, vsArm, vsPen, sb: h.sb };
   });
@@ -523,6 +551,117 @@ function closeArm(arm: ArmState, teamFinal: number, oppFinal: number, book: Book
   if (arm.outs >= 15 && teamFinal > oppFinal && leftAhead) book.add(arm.id, sim, 4);
 }
 
+/** Play one game into `book` at sim index `sim`. Returns [awayRuns, homeRuns]. */
+function playGame(
+  g: SimGame,
+  awayH: ReadyHitter[],
+  homeH: ReadyHitter[],
+  book: Book,
+  sim: number,
+  rng: () => number,
+): [number, number] {
+  const homeArm = freshArm(g.homeArm);
+  const awayArm = freshArm(g.awayArm);
+  const aPtr = { i: 0 };
+  const hPtr = { i: 0 };
+  let awayScore = 0;
+  let homeScore = 0;
+  const play = (side: "away" | "home") => {
+    if (side === "away") {
+      const before = awayScore;
+      simHalf(awayH, aPtr, homeArm, book, sim, rng, () => homeScore, () => before, (runs) => {
+        awayScore += runs;
+      });
+    } else {
+      const before = homeScore;
+      simHalf(homeH, hPtr, awayArm, book, sim, rng, () => awayScore, () => before, (runs) => {
+        homeScore += runs;
+      });
+    }
+  };
+  for (let inn = 1; inn <= 9; inn++) {
+    play("away");
+    if (inn === 9 && homeScore > awayScore) break;
+    play("home");
+  }
+  if (awayScore === homeScore) {
+    play("away");
+    if (homeScore <= awayScore) play("home");
+  }
+  closeArm(homeArm, homeScore, awayScore, book, sim);
+  closeArm(awayArm, awayScore, homeScore, book, sim);
+  return [awayScore, homeScore];
+}
+
+const NULL_BOOK: Book = { add() {} };
+
+/** Mean simulated runs for each side of one game at the given offense multipliers. */
+export function meanRuns(
+  g: SimGame,
+  league: Rates,
+  awayMul: number,
+  homeMul: number,
+  n: number,
+  seed: number,
+): [number, number] {
+  const awayH = readyHitters(g.awayHitters, g.homeArm, league, awayMul);
+  const homeH = readyHitters(g.homeHitters, g.awayArm, league, homeMul);
+  const rng = mulberry32(seed);
+  let a = 0;
+  let h = 0;
+  for (let sim = 0; sim < n; sim++) {
+    const [ar, hr] = playGame(g, awayH, homeH, NULL_BOOK, sim, rng);
+    a += ar;
+    h += hr;
+  }
+  return [a / n, h / n];
+}
+
+/** Runs are roughly ∝ (reach-base rate)^1.9 in this chain; used for the Newton-style step. */
+const RUN_ELASTICITY = 1.9;
+const MUL_MIN = 0.6;
+const MUL_MAX = 1.6;
+
+/**
+ * Anchor each team's simulated runs to its Vegas implied total by scaling that
+ * offense's reach-base events. Fixed pilot seed per game so the answer is stable
+ * across reruns. Teams without a line keep mul = 1 (pure stats model).
+ */
+export function anchorToVegas(games: SimGame[], league: Rates, pilotSims = 2500, iterations = 6) {
+  for (const g of games) {
+    const seed = (g.id ^ 0x9e3779b9) >>> 0;
+    const targets: [number | null, number | null] = [g.awayImplied ?? null, g.homeImplied ?? null];
+    const mul: [number, number] = [1, 1];
+    let runs = meanRuns(g, league, 1, 1, pilotSims, seed);
+    if (targets[0] != null || targets[1] != null) {
+      // Log-log secant per side, seeded with RUN_ELASTICITY; common random numbers keep it smooth.
+      const prevMul: [number, number] = [1, 1];
+      const prevRuns: [number, number] = [runs[0], runs[1]];
+      const elast: [number, number] = [RUN_ELASTICITY, RUN_ELASTICITY];
+      for (let it = 0; it < iterations; it++) {
+        for (const side of [0, 1] as const) {
+          const t = targets[side];
+          if (t == null || runs[side] <= 0.05) continue;
+          if (it > 0 && Math.abs(Math.log(mul[side] / prevMul[side])) > 1e-4) {
+            const e = Math.log(runs[side] / prevRuns[side]) / Math.log(mul[side] / prevMul[side]);
+            if (Number.isFinite(e)) elast[side] = clamp(e, 1, 3);
+          }
+          prevMul[side] = mul[side];
+          prevRuns[side] = runs[side];
+          mul[side] = clamp(mul[side] * Math.pow(t / runs[side], 1 / elast[side]), MUL_MIN, MUL_MAX);
+        }
+        runs = meanRuns(g, league, mul[0], mul[1], pilotSims, seed);
+        const done = [0, 1].every((s) => targets[s] == null || Math.abs(runs[s] - (targets[s] as number)) < 0.03);
+        if (done) break;
+      }
+    }
+    g.awayMul = mul[0];
+    g.homeMul = mul[1];
+    g.awaySimRuns = runs[0];
+    g.homeSimRuns = runs[1];
+  }
+}
+
 export async function simulateGames(
   games: SimGame[],
   league: Rates,
@@ -539,60 +678,9 @@ export async function simulateGames(
   const { map, book } = makeBook(ids, n);
   const rng = mulberry32(seed);
   for (const g of games) {
-    const awayH = readyHitters(g.awayHitters, g.homeArm, league);
-    const homeH = readyHitters(g.homeHitters, g.awayArm, league);
-    for (let sim = 0; sim < n; sim++) {
-      const homeArm = freshArm(g.homeArm);
-      const awayArm = freshArm(g.awayArm);
-      const aPtr = { i: 0 };
-      const hPtr = { i: 0 };
-      let awayScore = 0;
-      let homeScore = 0;
-      const play = (side: "away" | "home") => {
-        if (side === "away") {
-          const before = awayScore;
-          simHalf(
-            awayH,
-            aPtr,
-            homeArm,
-            book,
-            sim,
-            rng,
-            () => homeScore,
-            () => before,
-            (runs) => {
-              awayScore += runs;
-            },
-          );
-        } else {
-          const before = homeScore;
-          simHalf(
-            homeH,
-            hPtr,
-            awayArm,
-            book,
-            sim,
-            rng,
-            () => awayScore,
-            () => before,
-            (runs) => {
-              homeScore += runs;
-            },
-          );
-        }
-      };
-      for (let inn = 1; inn <= 9; inn++) {
-        play("away");
-        if (inn === 9 && homeScore > awayScore) break;
-        play("home");
-      }
-      if (awayScore === homeScore) {
-        play("away");
-        if (homeScore <= awayScore) play("home");
-      }
-      closeArm(homeArm, homeScore, awayScore, book, sim);
-      closeArm(awayArm, awayScore, homeScore, book, sim);
-    }
+    const awayH = readyHitters(g.awayHitters, g.homeArm, league, g.awayMul ?? 1);
+    const homeH = readyHitters(g.homeHitters, g.awayArm, league, g.homeMul ?? 1);
+    for (let sim = 0; sim < n; sim++) playGame(g, awayH, homeH, book, sim, rng);
     onProgress?.(games.indexOf(g) + 1, games.length);
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
@@ -945,4 +1033,167 @@ export function distribution(players: PoolPlayer[]) {
     counts[i].n += 1;
   }
   return { mean, std, p10: q(0.1), p50: q(0.5), p90: q(0.9), bins: counts, floor: mean - 0.5 * std };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Cash-rate objective                                                        */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Per-sim lineup totals. Player sample rows share the sim index, so same-game
+ * correlation (teammates, hitters vs the opposing arm) is carried into the total.
+ */
+export function lineupTotals(players: PoolPlayer[]): Float32Array {
+  const n = players[0]?.samples.length ?? 0;
+  const totals = new Float32Array(n);
+  for (const p of players) {
+    const s = p.samples;
+    for (let i = 0; i < n; i++) totals[i] += s[i];
+  }
+  return totals;
+}
+
+/** Share of sims where the lineup total clears the cash line. */
+export function cashRate(players: PoolPlayer[], line: number): number {
+  const t = lineupTotals(players);
+  if (!t.length) return 0;
+  let hit = 0;
+  for (let i = 0; i < t.length; i++) if (t[i] >= line) hit += 1;
+  return hit / t.length;
+}
+
+export interface CashSolveResult extends SolveResult {
+  cashRate: number | null;
+  seeds: number;
+}
+
+/** Candidates per slot tried in each swap pass (top by mean among legal swaps). */
+const SWAP_BREADTH = 40;
+const SEED_LAMBDAS = [0, 0.25, 0.5, 0.75, 1, 1.5];
+
+/**
+ * Pick the lineup that clears `cashLine` most often across the joint sims.
+ *
+ * Seeds come from the mean − λ·sd solver at several λ, then each seed is
+ * hill-climbed with single swaps scored directly on P(total ≥ cashLine).
+ * Ties break on mean. All cash rules (lineupLegal, locks, excludes, order cut) hold.
+ */
+export function solveCash(
+  pool: PoolPlayer[],
+  cashLine: number,
+  maxOrder: number,
+  cap = 50000,
+  lockedIds: number[] = [],
+  excludedIds: number[] = [],
+): CashSolveResult {
+  const locked = new Set(lockedIds);
+  const banned = new Set(excludedIds);
+  const active = pool.filter((p) => locked.has(p.id) || !banned.has(p.id));
+  const arms = active.filter((p) => p.isPitcher);
+  const hitters = active.filter(
+    (p) => !p.isPitcher && (locked.has(p.id) || (p.order >= 1 && p.order <= maxOrder)),
+  );
+  const eligible = (slot: Slot) =>
+    slot === "P" ? arms : hitters.filter((h) => h.slots.includes(slot));
+  const bySlot = new Map<Slot, PoolPlayer[]>();
+  for (const slot of ["P", "C", "1B", "2B", "3B", "SS", "OF"] as Slot[]) {
+    bySlot.set(slot, eligible(slot).slice().sort((a, b) => b.mean - a.mean));
+  }
+
+  const seen = new Set<string>();
+  const seeds: Assignment[][] = [];
+  let fallbackNote = "";
+  for (const lam of SEED_LAMBDAS) {
+    const r = solveLineup(pool, lam, maxOrder, cap, lockedIds, excludedIds);
+    if (!r.lineup) {
+      fallbackNote = r.note;
+      continue;
+    }
+    const key = r.lineup.map((a) => a.player.id).sort((a, b) => a - b).join(",");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    seeds.push(r.lineup);
+  }
+  if (!seeds.length) return { lineup: null, note: fallbackNote, cashRate: null, seeds: 0 };
+
+  const n = seeds[0][0].player.samples.length;
+  const score = (hits: number, mean: number) => hits / n + mean * 1e-7;
+
+  let best: Assignment[] | null = null;
+  let bestScore = -Infinity;
+  let bestRate = 0;
+
+  for (const seed of seeds) {
+    let current = seed.slice();
+    let totals = lineupTotals(current.map((a) => a.player));
+    let mean = current.reduce((s, a) => s + a.player.mean, 0);
+    let hits = 0;
+    for (let i = 0; i < n; i++) if (totals[i] >= cashLine) hits += 1;
+    let curScore = score(hits, mean);
+
+    for (let pass = 0; pass < 8; pass++) {
+      let improved = false;
+      for (let s = 0; s < current.length; s++) {
+        const out = current[s].player;
+        if (locked.has(out.id)) continue;
+        const slot = current[s].slot;
+        const inLineup = new Set(current.map((a) => a.player.id));
+        const others = current.filter((_, i) => i !== s).map((a) => a.player);
+        const tried: PoolPlayer[] = [];
+        for (const cand of bySlot.get(slot) ?? []) {
+          if (tried.length >= SWAP_BREADTH) break;
+          if (inLineup.has(cand.id)) continue;
+          if (!lineupLegal([...others, cand], cap)) continue;
+          tried.push(cand);
+        }
+        let pick: PoolPlayer | null = null;
+        let pickHits = hits;
+        let pickScore = curScore;
+        const o = out.samples;
+        for (const cand of tried) {
+          const c = cand.samples;
+          let h = 0;
+          for (let i = 0; i < n; i++) if (totals[i] - o[i] + c[i] >= cashLine) h += 1;
+          const sc = score(h, mean - out.mean + cand.mean);
+          if (sc > pickScore + 1e-9) {
+            pick = cand;
+            pickHits = h;
+            pickScore = sc;
+          }
+        }
+        if (pick) {
+          const c = pick.samples;
+          const next = new Float32Array(n);
+          for (let i = 0; i < n; i++) next[i] = totals[i] - o[i] + c[i];
+          totals = next;
+          mean = mean - out.mean + pick.mean;
+          hits = pickHits;
+          curScore = pickScore;
+          current = current.map((a, i) => (i === s ? { slot, player: pick! } : a));
+          improved = true;
+        }
+      }
+      if (!improved) break;
+    }
+    if (curScore > bestScore) {
+      bestScore = curScore;
+      bestRate = hits / n;
+      best = current;
+    }
+  }
+
+  const players = best!.map((a) => a.player);
+  const counts = teamCounts(players);
+  const blocks = [...blockedOpps(players)];
+  const sal = players.reduce((s, p) => s + p.salary, 0);
+  return {
+    lineup: best,
+    cashRate: bestRate,
+    seeds: seeds.length,
+    note: `Cap $${sal.toLocaleString("en-US")} · stacks ${
+      Object.entries(counts)
+        .map(([t, k]) => `${t} ${k}`)
+        .join(", ") || "none"
+    } · fading ${blocks.join(" & ") || "nobody"}`,
+  };
 }

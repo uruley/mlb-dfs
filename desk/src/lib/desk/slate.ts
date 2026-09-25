@@ -189,10 +189,123 @@ async function leagueRates(season: number): Promise<Rates> {
   return rates;
 }
 
+function lineFields(line: GameLine | null) {
+  if (!line || !line.total) return { awayImplied: null, homeImplied: null, lineSource: "No line posted. Stats model only." };
+  const [a, h] = impliedTotals(line.total, line.awayMl, line.homeMl);
+  const ml = line.awayMl != null && line.homeMl != null ? `ML ${line.awayMl > 0 ? "+" : ""}${line.awayMl}/${line.homeMl > 0 ? "+" : ""}${line.homeMl}` : "no ML, split even";
+  return {
+    awayImplied: a,
+    homeImplied: h,
+    lineSource: `${line.provider} total ${line.total}, ${ml}`,
+  };
+}
+
 function chunk<T>(list: T[], size: number) {
   const out: T[][] = [];
   for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size));
   return out;
+}
+
+const ESPN = "https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard";
+
+/** Pythagenpat-style exponent: win% ≈ R^x / (R^x + RA^x). Used to split a total by moneyline. */
+const PYTH_EXP = 1.83;
+
+export interface GameLine {
+  awayName: string;
+  homeName: string;
+  awayAbbr: string;
+  homeAbbr: string;
+  start: number;
+  total: number | null;
+  awayMl: number | null;
+  homeMl: number | null;
+  provider: string;
+}
+
+function americanToProb(odds: number) {
+  return odds < 0 ? -odds / (-odds + 100) : 100 / (odds + 100);
+}
+
+/** Vegas implied runs for [away, home] from a game total and both moneylines (vig removed). */
+export function impliedTotals(total: number, awayMl: number | null, homeMl: number | null): [number, number] {
+  if (awayMl == null || homeMl == null) return [total / 2, total / 2];
+  const a = americanToProb(awayMl);
+  const h = americanToProb(homeMl);
+  const pAway = Math.min(0.8, Math.max(0.2, a / (a + h)));
+  const ratio = Math.pow(pAway / (1 - pAway), 1 / PYTH_EXP);
+  const away = (total * ratio) / (1 + ratio);
+  return [away, total - away];
+}
+
+function oddsNum(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v !== "string") return null;
+  const t = v.trim().toUpperCase();
+  if (t === "EVEN" || t === "EV") return 100;
+  const n = Number(t.replace("+", ""));
+  return Number.isFinite(n) && n !== 0 ? n : null;
+}
+
+function teamKey(name: string) {
+  return name.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+const ABBR_ALIAS: Record<string, string> = { CHW: "CWS", CWS: "CWS", ARI: "AZ", AZ: "AZ", OAK: "ATH", ATH: "ATH", WAS: "WSH", WSH: "WSH" };
+
+function abbrKey(a: string) {
+  const u = a.toUpperCase();
+  return ABBR_ALIAS[u] ?? u;
+}
+
+/** Free DraftKings lines via ESPN's public scoreboard (CORS-open). Empty list on any failure. */
+export async function loadLines(date: string): Promise<GameLine[]> {
+  try {
+    const payload = (await getJson(`${ESPN}?dates=${date.replaceAll("-", "")}`)) as { events?: Record<string, unknown>[] };
+    const out: GameLine[] = [];
+    for (const ev of payload.events ?? []) {
+      const comp = (ev.competitions as Record<string, unknown>[] | undefined)?.[0];
+      if (!comp) continue;
+      const teams = (comp.competitors as { homeAway?: string; team?: { displayName?: string; abbreviation?: string } }[]) ?? [];
+      const away = teams.find((t) => t.homeAway === "away")?.team;
+      const home = teams.find((t) => t.homeAway === "home")?.team;
+      const odds = (comp.odds as Record<string, unknown>[] | undefined)?.[0];
+      if (!away || !home || !odds) continue;
+      const ml = odds.moneyline as
+        | { away?: { close?: { odds?: unknown }; open?: { odds?: unknown } }; home?: { close?: { odds?: unknown }; open?: { odds?: unknown } } }
+        | undefined;
+      const total = num(odds.overUnder) || null;
+      out.push({
+        awayName: away.displayName ?? "",
+        homeName: home.displayName ?? "",
+        awayAbbr: away.abbreviation ?? "",
+        homeAbbr: home.abbreviation ?? "",
+        start: Date.parse(str(ev.date)),
+        total,
+        awayMl: oddsNum(ml?.away?.close?.odds) ?? oddsNum(ml?.away?.open?.odds),
+        homeMl: oddsNum(ml?.home?.close?.odds) ?? oddsNum(ml?.home?.open?.odds),
+        provider: str((odds.provider as { name?: string } | undefined)?.name) || "ESPN",
+      });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+function matchLine(
+  lines: GameLine[],
+  away: { name: string; abbr: string },
+  home: { name: string; abbr: string },
+  start: number,
+): GameLine | null {
+  const same = (n: string, a: string, ln: string, la: string) =>
+    (n && teamKey(n) === teamKey(ln)) || (a && abbrKey(a) === abbrKey(la));
+  const hits = lines.filter((l) => same(away.name, away.abbr, l.awayName, l.awayAbbr) && same(home.name, home.abbr, l.homeName, l.homeAbbr));
+  if (!hits.length) return null;
+  // Doubleheaders: nearest scheduled start.
+  hits.sort((a, b) => Math.abs(a.start - start) - Math.abs(b.start - start));
+  return hits[0];
 }
 
 export async function loadSlate(date = mlbDate()): Promise<Slate> {
@@ -223,12 +336,12 @@ export async function loadSlate(date = mlbDate()): Promise<Slate> {
       for (const [id, stat] of parsePeople(payload)) people.set(id, stat);
     }),
   );
-  const league = await leagueRates(season);
+  const [league, lines] = await Promise.all([leagueRates(season), loadLines(date)]);
 
   const games: SimGame[] = open.map((g) => {
     const teams = g.teams as {
-      away: { team: { abbreviation?: string; id?: number }; probablePitcher?: { id?: number; fullName?: string } };
-      home: { team: { abbreviation?: string; id?: number }; probablePitcher?: { id?: number; fullName?: string } };
+      away: { team: { abbreviation?: string; id?: number; name?: string }; probablePitcher?: { id?: number; fullName?: string } };
+      home: { team: { abbreviation?: string; id?: number; name?: string }; probablePitcher?: { id?: number; fullName?: string } };
     };
     const away = teams.away.team.abbreviation ?? "AWY";
     const home = teams.home.team.abbreviation ?? "HOM";
@@ -316,6 +429,14 @@ export async function loadSlate(date = mlbDate()): Promise<Slate> {
       homeHitters: buildHitters(lineups.homePlayers, home, away),
       awayArm: buildArm(teams.away.probablePitcher, away, home),
       homeArm: buildArm(teams.home.probablePitcher, home, away),
+      ...lineFields(
+        matchLine(
+          lines,
+          { name: teams.away.team.name ?? "", abbr: away },
+          { name: teams.home.team.name ?? "", abbr: home },
+          Date.parse(str(g.gameDate)),
+        ),
+      ),
     };
   });
 

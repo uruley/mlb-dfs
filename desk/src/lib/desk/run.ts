@@ -1,4 +1,4 @@
-import { moments, pricePlayers, simulateGames, type PoolPlayer } from "@/lib/desk/engine";
+import { anchorToVegas, moments, pricePlayers, simulateGames, type PoolPlayer } from "@/lib/desk/engine";
 import { loadSlate, type Slate } from "@/lib/desk/slate";
 
 export const SIMS = 10000;
@@ -13,6 +13,7 @@ export async function buildDesk(
   date: string | undefined,
   onProgress: (message: string, pct: number) => void,
   overrides: Record<number, { ip: number; at: string }> = {},
+  anchor = true,
 ): Promise<DeskData> {
   onProgress("Reading the board", 0.08);
   const slate = await loadSlate(date);
@@ -27,6 +28,16 @@ export async function buildDesk(
       arm.targetBf = Math.round(Math.min(32, Math.max(6, over.ip * 4.35)));
       arm.role = over.ip < 2.2 ? "opener" : over.ip < 4.5 ? "bulk" : "starter";
       arm.workloadSource = `Manual ${over.ip.toFixed(1)} innings, set ${over.at}.`;
+    }
+  }
+  if (anchor) {
+    onProgress("Anchoring team runs to Vegas totals", 0.14);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    anchorToVegas(slate.games, slate.league);
+  } else {
+    for (const g of slate.games) {
+      g.awayMul = 1;
+      g.homeMul = 1;
     }
   }
   onProgress("Running 10,000 half-inning chains", 0.18);
